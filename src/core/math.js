@@ -1,0 +1,73 @@
+/**
+ * PAPER MATHEMATICAL LOGIC SYSTEM
+ * 
+ * Auto-updating computed mathematical operations accepting standard numbers or reactive state nodes.
+ */
+
+(function() {
+    const flatten = (arr) => arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatten(val) : val), []);
+    const getVal = (x) => (x && typeof x.subscribe === 'function' ? x.value : Number(x || 0));
+
+    paper.math = {
+        /**
+         * Calculates reactive sum of multiple states or numbers.
+         */
+        sum: (...args) => paper.computed(() => {
+            return flatten(args).reduce((acc, cur) => acc + getVal(cur), 0);
+        }),
+
+        /**
+         * Calculates reactive subtraction of two states or numbers.
+         */
+        sub: (a, b) => paper.computed(() => {
+            return getVal(a) - getVal(b);
+        }),
+
+        /**
+         * Calculates reactive product of multiple states or numbers.
+         */
+        mul: (...args) => paper.computed(() => {
+            let flat = flatten(args);
+            if (flat.length === 0) return 0;
+            return flat.reduce((acc, cur) => acc * (cur && typeof cur.subscribe === 'function' ? cur.value : Number(cur || 1)), 1);
+        }),
+
+        /**
+         * Calculates reactive division of two states or numbers.
+         */
+        div: (a, b) => paper.computed(() => {
+            let denominator = getVal(b);
+            if (denominator === 0) return 0;
+            return getVal(a) / denominator;
+        }),
+
+        /**
+         * Calculates reactive average of multiple states or numbers.
+         */
+        avg: (...args) => paper.computed(() => {
+            let flat = flatten(args);
+            if (flat.length === 0) return 0;
+            let sumVal = flat.reduce((acc, cur) => acc + getVal(cur), 0);
+            return sumVal / flat.length;
+        }),
+
+        /**
+         * Calculates reactive percentage of a value inside a total.
+         */
+        percent: (val, total) => paper.computed(() => {
+            let t = getVal(total);
+            if (t === 0) return 0;
+            return (getVal(val) / t) * 100;
+        }),
+
+        /**
+         * Calculates reactive rounded values.
+         */
+        round: (val, decimals = 0) => paper.computed(() => {
+            let v = getVal(val);
+            let d = getVal(decimals);
+            let factor = Math.pow(10, d);
+            return Math.round(v * factor) / factor;
+        })
+    };
+})();

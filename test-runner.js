@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Mock browser global environment
-global.HTMLElement = class HTMLElement {};
+global.Element = class Element {};
+global.HTMLElement = class HTMLElement extends global.Element {};
 global.DocumentFragment = class DocumentFragment {};
 global.window = global;
 global.document = {
