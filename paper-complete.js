@@ -16,9 +16,13 @@
  */
 
 const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
-                  'input','textarea','select','option','ul','ol','li','table','thead','tbody','tr','td',
-                  'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br',
-                  'strong','em','canvas','iframe'];
+                  'input','textarea','select','option','optgroup','ul','ol','li','dl','dt','dd',
+                  'table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
+                  'form','label','fieldset','legend','datalist','output',
+                  'section','article','header','footer','nav','aside','main',
+                  'pre','code','hr','br','strong','em','small','mark','sub','sup','i','b','u','s',
+                  'audio','video','source','track','picture','embed','iframe','canvas','svg',
+                  'details','summary','dialog','menu','menuitem','template','slot'];
 
 /**
  * Parses standard JS class arrays and objects into a space-separated string.
@@ -115,7 +119,19 @@ function paper(tag, ...args) {
             el.appendChild(node);
             paper.computed(() => {
                 let v = child();
-                node.textContent = String(v);
+                if (v instanceof Element || v instanceof DocumentFragment) {
+                    let parent = node.parentNode;
+                    if (parent) {
+                        let next = node.nextSibling;
+                        if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
+                            parent.replaceChild(v, next);
+                        } else {
+                            parent.insertBefore(v, next);
+                        }
+                    }
+                } else {
+                    node.textContent = String(v);
+                }
             });
         }
         else {
@@ -176,7 +192,12 @@ function paper(tag, ...args) {
             Object.entries(arg).forEach(([k, v]) => {
                 if (['style', 'data', 'attrs'].includes(k)) return;
                 
-                if (k.startsWith('on')) {
+                if (k === 'on' && typeof v === 'object' && v !== null) {
+                    Object.entries(v).forEach(([evt, handler]) => {
+                        el.addEventListener(evt, handler);
+                    });
+                }
+                else if (k.startsWith('on')) {
                     let evName = k.slice(2).toLowerCase();
                     el.addEventListener(evName, v);
                 }
@@ -214,6 +235,17 @@ paper.flex = {
 };
 
 paper.grid = (...args) => paper('div', '.grid', ...args);
+paper.container = (...args) => paper('div', '.container', ...args);
+paper.row = (...args) => paper('div', '.row', ...args);
+paper.col = (...args) => paper('div', '.col', ...args);
+
+// Register global components
+paper.component = (name, constructor) => {
+    if (paper[name]) {
+        console.warn(`PaperWarning: Component '${name}' already exists and will be overwritten.`);
+    }
+    paper[name] = (...args) => constructor(...args);
+};
 
 // Standard utilities
 paper.inspect = (component) => {
@@ -426,53 +458,134 @@ paper.if = (conditionState, trueVal, falseVal) => {
     return container;
 };
 
+/**
+ * Reactively renders a list of DOM elements from an array state.
+ * 
+ * @param {PaperState} arrayState Reactive state containing an array
+ * @param {function} renderCallback Function returning an HTMLElement for each item
+ * @returns {HTMLDivElement} Content container fragment
+ */
+paper.for = (arrayState, renderCallback) => {
+    let container = paper.div({ style: { display: 'contents' } });
+    
+    let update = (arr) => {
+        container.innerHTML = '';
+        if (Array.isArray(arr)) {
+            arr.forEach((item, index) => {
+                let el = renderCallback(item, index);
+                if (el instanceof Element || el instanceof DocumentFragment) {
+                    container.appendChild(el);
+                }
+            });
+        }
+    };
+    
+    if (arrayState && typeof arrayState.subscribe === 'function') {
+        arrayState.subscribe(update);
+    } else {
+        update(arrayState);
+    }
+    return container;
+};
+
 
 // --- MODULE: core/router.js ---
 /**
- * PAPER ROUTER SYSTEM
- * 
- * Client-side single page app hash routing.
+ * PAPER ROUTER
+ * Clean URL HTML5 History API Router.
  */
+(function() {
+    let routes = [];
+    let currentView = paper.state(null);
+    let routerContainer = null;
+    let pathParams = paper.state({});
 
-let routes = {};
-let routerContainer = null;
-
-/**
- * Map a new hash SPA routing path to a component builder callback.
- * 
- * @param {string} path Anchor hash path (e.g. '/' or '/about')
- * @param {function} componentFn Callback rendering path components
- */
-paper.route = (path, componentFn) => {
-    routes[path] = componentFn;
-};
-
-/**
- * Initialize and mount the hash router container. Updates routing states on hashchanges.
- * 
- * @returns {HTMLDivElement} Dynamic router mount element
- */
-paper.router = () => {
-    routerContainer = paper.div({ style: { display: 'contents' } });
-    let navigate = () => {
-        let path = window.location.hash.slice(1) || '/';
-        let routeFn = routes[path] || routes['*'] || (() => paper.div("404 - Not Found"));
-        routerContainer.innerHTML = '';
-        routerContainer.appendChild(routeFn());
+    /**
+     * Define a route.
+     * @param {string} path Route path (e.g., "/about", "/user/:id")
+     * @param {function} componentFn Component to render
+     */
+    paper.route = (path, componentFn) => {
+        routes.push({
+            path,
+            regex: new RegExp('^' + path.replace(/:\w+/g, '([^/]+)') + '$'),
+            keys: (path.match(/:\w+/g) || []).map(k => k.slice(1)),
+            componentFn
+        });
     };
-    window.addEventListener('hashchange', navigate);
-    setTimeout(navigate, 0);
-    return routerContainer;
-};
 
-/**
- * Navigate programmatically to any registered hash SPA route.
- * 
- * @param {string} path Routing target hash path
- */
-paper.navigate = (path) => {
-    window.location.hash = path;
-};
+    /**
+     * Navigates to a specific path using HTML5 pushState.
+     * @param {string} path Target URL path
+     */
+    paper.navigate = (path) => {
+        if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', path);
+            window.dispatchEvent(new Event('popstate'));
+        }
+    };
+
+    /**
+     * Intercept clicks on local links to route via pushState instead of full reload.
+     */
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', e => {
+            let a = e.target.closest('a');
+            if (a && a.href && a.href.startsWith(window.location.origin)) {
+                // If it's a local link and not a hash link
+                let path = a.getAttribute('href');
+                if (path && !path.startsWith('#') && !a.hasAttribute('data-no-route')) {
+                    e.preventDefault();
+                    paper.navigate(path);
+                }
+            }
+        });
+
+        window.addEventListener('popstate', () => {
+            let currentPath = window.location.pathname;
+            let matchFound = false;
+
+            for (let route of routes) {
+                let match = currentPath.match(route.regex);
+                if (match) {
+                    let params = {};
+                    route.keys.forEach((key, index) => {
+                        params[key] = match[index + 1];
+                    });
+                    pathParams.value = params;
+                    currentView.value = route.componentFn;
+                    matchFound = true;
+                    break;
+                }
+            }
+            if (!matchFound) {
+                currentView.value = () => paper.div("404 - Route Not Found");
+            }
+        });
+    }
+
+    /**
+     * Global accessor for route parameters
+     */
+    paper.useParams = () => pathParams;
+
+    /**
+     * Initializes the router and returns the reactive router container.
+     */
+    paper.router = () => {
+        if (typeof window !== 'undefined' && routes.length > 0 && !currentView.value) {
+            window.dispatchEvent(new Event('popstate')); // Initial load
+        }
+        
+        // Reactive component switcher
+        return paper.if(
+            currentView,
+            () => currentView.value(),
+            () => paper.div()
+        );
+    };
+
+})();
 
 
 // --- MODULE: core/math.js ---
@@ -1357,6 +1470,234 @@ paper.crud = (name, initialData = []) => {
 })();
 
 
+// --- MODULE: plugins/animate.js ---
+/**
+ * PAPER ANIMATE
+ * Zero-dependency hardware-accelerated animation engine.
+ */
+(function() {
+    // Inject animate.css dynamically if not present
+    if (typeof document !== 'undefined' && !document.getElementById('paper-animate-styles')) {
+        let link = document.createElement('link');
+        link.id = 'paper-animate-styles';
+        link.rel = 'stylesheet';
+        link.href = 'animate.css'; // Expects animate.css to be in the same folder or bundled
+        document.head.appendChild(link);
+    }
+
+    const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+    
+    // Intersection Observer for scroll animations
+    let observer = null;
+    if (typeof window !== 'undefined' && 'IntersectionObserver' in window) {
+        observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    let anim = entry.target.dataset.animate;
+                    if (anim) {
+                        entry.target.classList.add(`animate-${anim}`);
+                        entry.target.classList.add('animated');
+                    }
+                    if (entry.target.dataset.animateOnce !== 'false') {
+                        observer.unobserve(entry.target);
+                    }
+                } else if (entry.target.dataset.animateOnce === 'false') {
+                    // Reverse animation if scrolling out of view
+                    let anim = entry.target.dataset.animate;
+                    if (anim) {
+                        entry.target.classList.remove(`animate-${anim}`);
+                        entry.target.classList.remove('animated');
+                    }
+                }
+            });
+        }, { threshold: 0.1 });
+    }
+
+    // Override paper-core.js to intercept 'animate' attribute
+    const originalPaper = window.paper;
+    if (originalPaper) {
+        // We will monkey-patch the original paper function or use a plugin hook
+        // Since paper is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
+        // Actually, the easiest way is to add a hook in paper-core.js. 
+        // But to keep it self-contained, we can observe the DOM for [data-animate] or [animate].
+        // Alternatively, since paper-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
+        
+        let mo = new MutationObserver(mutations => {
+            if (prefersReducedMotion) return;
+            mutations.forEach(m => {
+                m.addedNodes.forEach(node => {
+                    if (node instanceof Element) {
+                        let elements = [node, ...node.querySelectorAll('[animate]')];
+                        elements.forEach(el => {
+                            if (el.hasAttribute('animate') && observer) {
+                                let animType = el.getAttribute('animate');
+                                el.dataset.animate = animType;
+                                el.removeAttribute('animate'); // Clean DOM
+                                el.classList.add('paper-animate-base');
+                                observer.observe(el);
+                            }
+                        });
+                    }
+                });
+            });
+        });
+        
+        if (typeof document !== 'undefined') {
+            mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+        }
+    }
+})();
+
+
+// --- MODULE: plugins/charts.js ---
+/**
+ * PAPER CHARTS
+ * Zero-dependency HTML5 Canvas charting plugin.
+ */
+(function() {
+    paper.chart = (config) => {
+        let canvas = document.createElement('canvas');
+        let ctx = canvas.getContext('2d');
+        
+        let container = paper.div('.paper-chart-container', canvas, Object.assign({
+            style: { position: 'relative', width: '100%', height: '300px' }
+        }, config.attrs || {}));
+
+        let resizeObserver = new ResizeObserver(entries => {
+            for (let entry of entries) {
+                let rect = entry.contentRect;
+                canvas.width = rect.width;
+                canvas.height = rect.height;
+                renderChart();
+            }
+        });
+        
+        let renderChart = () => {
+            let width = canvas.width;
+            let height = canvas.height;
+            if (width === 0 || height === 0) return;
+            
+            ctx.clearRect(0, 0, width, height);
+            
+            let type = config.type || 'bar';
+            let data = config.data || [];
+            let colors = config.colors || ['#6366f1', '#14b8a6', '#f43f5e', '#f59e0b', '#8b5cf6'];
+            
+            if (type === 'bar') {
+                let padding = 40;
+                let barWidth = (width - padding * 2) / data.length - 10;
+                let maxVal = Math.max(...data.map(d => typeof d === 'object' ? d.value : d));
+                
+                data.forEach((item, i) => {
+                    let val = typeof item === 'object' ? item.value : item;
+                    let label = typeof item === 'object' ? item.label : '';
+                    let barHeight = (val / maxVal) * (height - padding * 2);
+                    let x = padding + i * (barWidth + 10);
+                    let y = height - padding - barHeight;
+                    
+                    ctx.fillStyle = colors[i % colors.length];
+                    ctx.beginPath();
+                    ctx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
+                    ctx.fill();
+                    
+                    if (label) {
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.font = '12px sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(label, x + barWidth / 2, height - padding + 20);
+                    }
+                });
+            } else if (type === 'circle' || type === 'pie') {
+                let cx = width / 2;
+                let cy = height / 2;
+                let radius = Math.min(cx, cy) - 20;
+                
+                if (type === 'circle') {
+                    // Circular Progress
+                    let val = typeof config.value === 'function' ? config.value() : (config.value || 0);
+                    let max = config.max || 100;
+                    let percent = val / max;
+                    
+                    // Background track
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+                    ctx.lineWidth = 15;
+                    ctx.stroke();
+                    
+                    // Progress arc
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, radius, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * percent));
+                    ctx.strokeStyle = colors[0];
+                    ctx.lineCap = 'round';
+                    ctx.lineWidth = 15;
+                    ctx.stroke();
+                    
+                    // Text
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 24px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`${Math.round(percent * 100)}%`, cx, cy);
+                } else if (type === 'pie') {
+                    let total = data.reduce((sum, d) => sum + (typeof d === 'object' ? d.value : d), 0);
+                    let startAngle = -Math.PI / 2;
+                    
+                    data.forEach((item, i) => {
+                        let val = typeof item === 'object' ? item.value : item;
+                        let sliceAngle = (val / total) * Math.PI * 2;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.arc(cx, cy, radius, startAngle, startAngle + sliceAngle);
+                        ctx.closePath();
+                        
+                        ctx.fillStyle = colors[i % colors.length];
+                        ctx.fill();
+                        
+                        startAngle += sliceAngle;
+                    });
+                }
+            } else if (type === 'line') {
+                let padding = 40;
+                let maxVal = Math.max(...data.map(d => typeof d === 'object' ? d.value : d));
+                let stepX = (width - padding * 2) / (data.length - 1 || 1);
+                
+                ctx.beginPath();
+                ctx.strokeStyle = colors[0];
+                ctx.lineWidth = 3;
+                ctx.lineJoin = 'round';
+                
+                data.forEach((item, i) => {
+                    let val = typeof item === 'object' ? item.value : item;
+                    let x = padding + i * stepX;
+                    let y = height - padding - ((val / maxVal) * (height - padding * 2));
+                    
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                });
+                ctx.stroke();
+            }
+        };
+
+        // If config.value or config.data is reactive, subscribe
+        if (config.value && typeof config.value.subscribe === 'function') {
+            config.value.subscribe(() => {
+                requestAnimationFrame(renderChart);
+            });
+        }
+        
+        // Initial setup
+        setTimeout(() => {
+            resizeObserver.observe(container);
+            renderChart();
+        }, 0);
+
+        return container;
+    };
+})();
+
+
 
     // Auto-inject Themeable Stylesheets
     if (typeof document !== 'undefined') {
@@ -1550,6 +1891,78 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
     background: var(--paper-surface, #1e293b) !important;
     border: 1px solid var(--paper-border, #334155) !important;
     border-radius: var(--paper-radius, 12px) !important;
+}
+
+/* PAPER ANIMATE CSS */
+.paper-animate-base {
+    opacity: 0;
+    will-change: transform, opacity;
+    animation-duration: 0.8s;
+    animation-timing-function: cubic-bezier(0.165, 0.84, 0.44, 1);
+    animation-fill-mode: forwards;
+}
+
+.animated {
+    opacity: 1; /* fallback if animation fails */
+}
+
+/* Entrance Animations */
+.animate-fade-in { animation-name: paper-fade-in; }
+@keyframes paper-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.animate-slide-up { animation-name: paper-slide-up; }
+@keyframes paper-slide-up {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-down { animation-name: paper-slide-down; }
+@keyframes paper-slide-down {
+    from { opacity: 0; transform: translateY(-40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-zoom-in { animation-name: paper-zoom-in; }
+@keyframes paper-zoom-in {
+    from { opacity: 0; transform: scale(0.85); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.animate-bounce { animation-name: paper-bounce; animation-timing-function: cubic-bezier(0.28, 0.84, 0.42, 1); }
+@keyframes paper-bounce {
+    0% { opacity: 0; transform: scale(0.3); }
+    50% { opacity: 1; transform: scale(1.05); }
+    70% { transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Interactive Hover Animations */
+.hover-grow {
+    transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+.hover-grow:hover {
+    transform: scale(1.05);
+}
+
+.hover-lift {
+    transition: transform 0.3s cubic-bezier(0.165, 0.84, 0.44, 1), box-shadow 0.3s;
+}
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Reduce motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .paper-animate-base, .hover-grow, .hover-lift {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
 }
 `;
         document.head.appendChild(style);

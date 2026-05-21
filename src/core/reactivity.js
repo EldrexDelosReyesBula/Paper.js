@@ -90,3 +90,33 @@ paper.if = (conditionState, trueVal, falseVal) => {
     }
     return container;
 };
+
+/**
+ * Reactively renders a list of DOM elements from an array state.
+ * 
+ * @param {PaperState} arrayState Reactive state containing an array
+ * @param {function} renderCallback Function returning an HTMLElement for each item
+ * @returns {HTMLDivElement} Content container fragment
+ */
+paper.for = (arrayState, renderCallback) => {
+    let container = paper.div({ style: { display: 'contents' } });
+    
+    let update = (arr) => {
+        container.innerHTML = '';
+        if (Array.isArray(arr)) {
+            arr.forEach((item, index) => {
+                let el = renderCallback(item, index);
+                if (el instanceof Element || el instanceof DocumentFragment) {
+                    container.appendChild(el);
+                }
+            });
+        }
+    };
+    
+    if (arrayState && typeof arrayState.subscribe === 'function') {
+        arrayState.subscribe(update);
+    } else {
+        update(arrayState);
+    }
+    return container;
+};

@@ -9,7 +9,11 @@ const coreFiles = [
     'core/math.js',
     'core/crud.js'
 ];
-const pluginsFile = 'plugins/official.js';
+const pluginFiles = [
+    'plugins/official.js',
+    'plugins/animate.js',
+    'plugins/charts.js'
+];
 const stylesFile = 'styles/complete.css';
 
 console.log("🚀 Starting Paper.js compiler...");
@@ -46,11 +50,13 @@ ${coreContents}
     console.log("✨ compiled paper.js successfully!");
 
     // 3. Load official plugins & widgets
-    const pluginsPath = path.join(srcDir, pluginsFile);
-    if (!fs.existsSync(pluginsPath)) {
-        throw new Error(`Plugins source file not found: ${pluginsPath}`);
-    }
-    const pluginsContent = `// --- MODULE: ${pluginsFile} ---\n` + fs.readFileSync(pluginsPath, 'utf8') + '\n';
+    const pluginsContent = pluginFiles.map(file => {
+        const filePath = path.join(srcDir, file);
+        if (!fs.existsSync(filePath)) {
+            throw new Error(`Plugins source file not found: ${filePath}`);
+        }
+        return `// --- MODULE: ${file} ---\n` + fs.readFileSync(filePath, 'utf8') + '\n';
+    }).join('\n');
 
     // 4. Load styled CSS variable rules
     const stylesPath = path.join(srcDir, stylesFile);

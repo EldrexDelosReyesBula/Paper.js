@@ -5,9 +5,13 @@
  */
 
 const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
-                  'input','textarea','select','option','ul','ol','li','table','thead','tbody','tr','td',
-                  'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br',
-                  'strong','em','canvas','iframe'];
+                  'input','textarea','select','option','optgroup','ul','ol','li','dl','dt','dd',
+                  'table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
+                  'form','label','fieldset','legend','datalist','output',
+                  'section','article','header','footer','nav','aside','main',
+                  'pre','code','hr','br','strong','em','small','mark','sub','sup','i','b','u','s',
+                  'audio','video','source','track','picture','embed','iframe','canvas','svg',
+                  'details','summary','dialog','menu','menuitem','template','slot'];
 
 /**
  * Parses standard JS class arrays and objects into a space-separated string.
@@ -104,7 +108,19 @@ function paper(tag, ...args) {
             el.appendChild(node);
             paper.computed(() => {
                 let v = child();
-                node.textContent = String(v);
+                if (v instanceof Element || v instanceof DocumentFragment) {
+                    let parent = node.parentNode;
+                    if (parent) {
+                        let next = node.nextSibling;
+                        if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
+                            parent.replaceChild(v, next);
+                        } else {
+                            parent.insertBefore(v, next);
+                        }
+                    }
+                } else {
+                    node.textContent = String(v);
+                }
             });
         }
         else {
@@ -165,7 +181,12 @@ function paper(tag, ...args) {
             Object.entries(arg).forEach(([k, v]) => {
                 if (['style', 'data', 'attrs'].includes(k)) return;
                 
-                if (k.startsWith('on')) {
+                if (k === 'on' && typeof v === 'object' && v !== null) {
+                    Object.entries(v).forEach(([evt, handler]) => {
+                        el.addEventListener(evt, handler);
+                    });
+                }
+                else if (k.startsWith('on')) {
                     let evName = k.slice(2).toLowerCase();
                     el.addEventListener(evName, v);
                 }
@@ -203,6 +224,17 @@ paper.flex = {
 };
 
 paper.grid = (...args) => paper('div', '.grid', ...args);
+paper.container = (...args) => paper('div', '.container', ...args);
+paper.row = (...args) => paper('div', '.row', ...args);
+paper.col = (...args) => paper('div', '.col', ...args);
+
+// Register global components
+paper.component = (name, constructor) => {
+    if (paper[name]) {
+        console.warn(`PaperWarning: Component '${name}' already exists and will be overwritten.`);
+    }
+    paper[name] = (...args) => constructor(...args);
+};
 
 // Standard utilities
 paper.inspect = (component) => {

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper.js - Official Documentation</title>
+    <meta name="description" content="Learn how to use Paper.js to build lightning-fast web applications with zero virtual DOM overhead.">
+    <link rel="icon" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Paper Complete -->
+    <script src="paper-complete.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #0a0f1c;
+            --bg-card: rgba(13, 17, 34, 0.7);
+            --border-glow: rgba(99, 102, 241, 0.2);
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.15);
+            --teal: #14b8a6;
+            --rose: #f43f5e;
+            --text-main: #94a3b8;
+            --text-head: #f8fafc;
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.05), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(20, 184, 166, 0.05), transparent 25%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
+
+        /* Documentation Layout Grid */
+        #docs-app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(10, 15, 28, 0.95);
+            border-right: 1px solid var(--border-glow);
+            backdrop-filter: blur(12px);
+            padding: 2rem 1rem;
+            position: fixed;
+            top: 0; bottom: 0; left: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .content-area {
+            flex: 1;
+            margin-left: 280px;
+            padding: 3rem 4rem;
+            max-width: 900px;
+        }
+
+        @media (max-width: 768px) {
+            #docs-app { flex-direction: column; }
+            .sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border-glow); padding: 1rem; }
+            .content-area { margin-left: 0; padding: 2rem 1.5rem; }
+        }
+        
+        /* Code Blocks */
+        pre {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        code {
+            font-family: 'Fira Code', monospace;
+            color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        pre code {
+            background: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        h1, h2, h3 { color: var(--text-head); }
+        h1 { font-size: 2.5rem; letter-spacing: -0.02em; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.8rem; margin-top: 3rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        
+        a { color: var(--primary); text-decoration: none; transition: color 0.2s; }
+        a:hover { color: #818cf8; }
+        
+        .sidebar-link {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--text-main);
+            border-radius: 6px;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+        .sidebar-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-head);
+        }
+        .sidebar-link.active {
+            background: var(--primary-glow);
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
+        }
+        
+        .hero-banner {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(20, 184, 166, 0.1) 100%);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="docs-app"></div>
+    <script src="docs.js"></script>
+</body>
+</html>

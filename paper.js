@@ -16,9 +16,13 @@
  */
 
 const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
-                  'input','textarea','select','option','ul','ol','li','table','thead','tbody','tr','td',
-                  'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br',
-                  'strong','em','canvas','iframe'];
+                  'input','textarea','select','option','optgroup','ul','ol','li','dl','dt','dd',
+                  'table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
+                  'form','label','fieldset','legend','datalist','output',
+                  'section','article','header','footer','nav','aside','main',
+                  'pre','code','hr','br','strong','em','small','mark','sub','sup','i','b','u','s',
+                  'audio','video','source','track','picture','embed','iframe','canvas','svg',
+                  'details','summary','dialog','menu','menuitem','template','slot'];
 
 /**
  * Parses standard JS class arrays and objects into a space-separated string.
@@ -115,7 +119,19 @@ function paper(tag, ...args) {
             el.appendChild(node);
             paper.computed(() => {
                 let v = child();
-                node.textContent = String(v);
+                if (v instanceof Element || v instanceof DocumentFragment) {
+                    let parent = node.parentNode;
+                    if (parent) {
+                        let next = node.nextSibling;
+                        if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
+                            parent.replaceChild(v, next);
+                        } else {
+                            parent.insertBefore(v, next);
+                        }
+                    }
+                } else {
+                    node.textContent = String(v);
+                }
             });
         }
         else {
@@ -176,7 +192,12 @@ function paper(tag, ...args) {
             Object.entries(arg).forEach(([k, v]) => {
                 if (['style', 'data', 'attrs'].includes(k)) return;
                 
-                if (k.startsWith('on')) {
+                if (k === 'on' && typeof v === 'object' && v !== null) {
+                    Object.entries(v).forEach(([evt, handler]) => {
+                        el.addEventListener(evt, handler);
+                    });
+                }
+                else if (k.startsWith('on')) {
                     let evName = k.slice(2).toLowerCase();
                     el.addEventListener(evName, v);
                 }
@@ -214,6 +235,17 @@ paper.flex = {
 };
 
 paper.grid = (...args) => paper('div', '.grid', ...args);
+paper.container = (...args) => paper('div', '.container', ...args);
+paper.row = (...args) => paper('div', '.row', ...args);
+paper.col = (...args) => paper('div', '.col', ...args);
+
+// Register global components
+paper.component = (name, constructor) => {
+    if (paper[name]) {
+        console.warn(`PaperWarning: Component '${name}' already exists and will be overwritten.`);
+    }
+    paper[name] = (...args) => constructor(...args);
+};
 
 // Standard utilities
 paper.inspect = (component) => {
@@ -426,53 +458,134 @@ paper.if = (conditionState, trueVal, falseVal) => {
     return container;
 };
 
+/**
+ * Reactively renders a list of DOM elements from an array state.
+ * 
+ * @param {PaperState} arrayState Reactive state containing an array
+ * @param {function} renderCallback Function returning an HTMLElement for each item
+ * @returns {HTMLDivElement} Content container fragment
+ */
+paper.for = (arrayState, renderCallback) => {
+    let container = paper.div({ style: { display: 'contents' } });
+    
+    let update = (arr) => {
+        container.innerHTML = '';
+        if (Array.isArray(arr)) {
+            arr.forEach((item, index) => {
+                let el = renderCallback(item, index);
+                if (el instanceof Element || el instanceof DocumentFragment) {
+                    container.appendChild(el);
+                }
+            });
+        }
+    };
+    
+    if (arrayState && typeof arrayState.subscribe === 'function') {
+        arrayState.subscribe(update);
+    } else {
+        update(arrayState);
+    }
+    return container;
+};
+
 
 // --- MODULE: core/router.js ---
 /**
- * PAPER ROUTER SYSTEM
- * 
- * Client-side single page app hash routing.
+ * PAPER ROUTER
+ * Clean URL HTML5 History API Router.
  */
+(function() {
+    let routes = [];
+    let currentView = paper.state(null);
+    let routerContainer = null;
+    let pathParams = paper.state({});
 
-let routes = {};
-let routerContainer = null;
-
-/**
- * Map a new hash SPA routing path to a component builder callback.
- * 
- * @param {string} path Anchor hash path (e.g. '/' or '/about')
- * @param {function} componentFn Callback rendering path components
- */
-paper.route = (path, componentFn) => {
-    routes[path] = componentFn;
-};
-
-/**
- * Initialize and mount the hash router container. Updates routing states on hashchanges.
- * 
- * @returns {HTMLDivElement} Dynamic router mount element
- */
-paper.router = () => {
-    routerContainer = paper.div({ style: { display: 'contents' } });
-    let navigate = () => {
-        let path = window.location.hash.slice(1) || '/';
-        let routeFn = routes[path] || routes['*'] || (() => paper.div("404 - Not Found"));
-        routerContainer.innerHTML = '';
-        routerContainer.appendChild(routeFn());
+    /**
+     * Define a route.
+     * @param {string} path Route path (e.g., "/about", "/user/:id")
+     * @param {function} componentFn Component to render
+     */
+    paper.route = (path, componentFn) => {
+        routes.push({
+            path,
+            regex: new RegExp('^' + path.replace(/:\w+/g, '([^/]+)') + '$'),
+            keys: (path.match(/:\w+/g) || []).map(k => k.slice(1)),
+            componentFn
+        });
     };
-    window.addEventListener('hashchange', navigate);
-    setTimeout(navigate, 0);
-    return routerContainer;
-};
 
-/**
- * Navigate programmatically to any registered hash SPA route.
- * 
- * @param {string} path Routing target hash path
- */
-paper.navigate = (path) => {
-    window.location.hash = path;
-};
+    /**
+     * Navigates to a specific path using HTML5 pushState.
+     * @param {string} path Target URL path
+     */
+    paper.navigate = (path) => {
+        if (typeof window !== 'undefined') {
+            window.history.pushState({}, '', path);
+            window.dispatchEvent(new Event('popstate'));
+        }
+    };
+
+    /**
+     * Intercept clicks on local links to route via pushState instead of full reload.
+     */
+    if (typeof document !== 'undefined') {
+        document.addEventListener('click', e => {
+            let a = e.target.closest('a');
+            if (a && a.href && a.href.startsWith(window.location.origin)) {
+                // If it's a local link and not a hash link
+                let path = a.getAttribute('href');
+                if (path && !path.startsWith('#') && !a.hasAttribute('data-no-route')) {
+                    e.preventDefault();
+                    paper.navigate(path);
+                }
+            }
+        });
+
+        window.addEventListener('popstate', () => {
+            let currentPath = window.location.pathname;
+            let matchFound = false;
+
+            for (let route of routes) {
+                let match = currentPath.match(route.regex);
+                if (match) {
+                    let params = {};
+                    route.keys.forEach((key, index) => {
+                        params[key] = match[index + 1];
+                    });
+                    pathParams.value = params;
+                    currentView.value = route.componentFn;
+                    matchFound = true;
+                    break;
+                }
+            }
+            if (!matchFound) {
+                currentView.value = () => paper.div("404 - Route Not Found");
+            }
+        });
+    }
+
+    /**
+     * Global accessor for route parameters
+     */
+    paper.useParams = () => pathParams;
+
+    /**
+     * Initializes the router and returns the reactive router container.
+     */
+    paper.router = () => {
+        if (typeof window !== 'undefined' && routes.length > 0 && !currentView.value) {
+            window.dispatchEvent(new Event('popstate')); // Initial load
+        }
+        
+        // Reactive component switcher
+        return paper.if(
+            currentView,
+            () => currentView.value(),
+            () => paper.div()
+        );
+    };
+
+})();
 
 
 // --- MODULE: core/math.js ---

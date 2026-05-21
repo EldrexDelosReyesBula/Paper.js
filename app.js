@@ -189,9 +189,9 @@ return app;`
                     paper.span("Launch Sandbox Studio"),
                     paper.icon('arrowRight', { size: 16 })
                 ),
-                paper.a({ href: '#docs', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' } },
+                paper.a({ href: 'docs.html', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' } },
                     paper.icon('book', { size: 16 }),
-                    "Visual Components Catalog"
+                    "Library Documentation"
                 )
             ),
             paper.div(".hero-stats",
@@ -607,8 +607,61 @@ paper.toast("This is a real Windows system notification! 💻", "info", 3000, tr
                         )
                     );
                 }
+        },
+        'charts': {
+            title: 'Native Canvas Charts',
+            icon: 'bar-chart',
+            blueprint: `paper.chart({\n    type: 'circle',\n    value: paper.state(75),\n    max: 100,\n    colors: ['#38bdf8']\n});`,
+            creator: () => {
+                let progress = paper.state(0);
+                let interval = setInterval(() => { progress.value = (progress.value + 5) % 105; }, 500);
+                
+                let container = paper.div(
+                    paper.h4('Reactive Canvas Chart Renderers'),
+                    paper.div('.row', { style: { marginTop: '20px' } },
+                        paper.div('.col-md-6', paper.chart({ type: 'circle', value: progress, colors: ['#6366f1'] })),
+                        paper.div('.col-md-6', paper.chart({ type: 'bar', data: [20, 50, 30, 80, 40] }))
+                    )
+                );
+                // cleanup interval when destroyed if necessary, but this is a simple demo
+                return container;
             }
-        };
+        },
+        'animations': {
+            title: 'Paper Animate',
+            icon: 'zap',
+            blueprint: `paper.div({ animate: 'slide-up' },\n    'I will animate natively on scroll!'\n);`,
+            creator: () => {
+                return paper.div({ style: { padding: '40px', textAlign: 'center' } },
+                    paper.h2('Zero-Dependency Animations', { animate: 'fade-in' }),
+                    paper.p('Tag an element with `animate: "slide-up"` and it automatically animates!', { animate: 'slide-up' }),
+                    paper.button('Hover me!', { animate: 'zoom-in', class: 'hover-grow', style: { marginTop: '20px', background: 'var(--primary)', color: 'white', padding: '10px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer' } })
+                );
+            }
+        },
+        'reactivity_list': {
+            title: 'Reactive Loop Lists',
+            icon: 'list',
+            blueprint: `let list = paper.state([1, 2, 3]);\npaper.for(list, (item) => paper.li(item));`,
+            creator: () => {
+                let list = paper.state(['Build Router', 'Write Animations', 'Render Charts']);
+                return paper.div(
+                    paper.h3('Auto-Syncing DOM Lists'),
+                    paper.ul({ style: { marginBottom: '20px' } },
+                        paper.for(list, (item, i) => paper.li(item, { style: { padding: '8px', background: 'rgba(255,255,255,0.05)', margin: '4px 0', borderRadius: '4px' } }))
+                    ),
+                    paper.button('Add Random Task', {
+                        onclick: () => {
+                            let newArr = [...list.value];
+                            newArr.push('Task ' + Math.floor(Math.random() * 100));
+                            list.value = newArr;
+                        },
+                        style: { background: 'var(--teal)', color: 'white', padding: '8px 16px', borderRadius: '4px', border: 'none', cursor: 'pointer' }
+                    })
+                );
+            }
+        }
+    };
 
         const updateCatalog = (key) => {
             selectedCatalogKey = key;
@@ -790,7 +843,7 @@ paper.toast("This is a real Windows system notification! 💻", "info", 3000, tr
                     
                     paper.div("#canvas-plugin-mount", { style: { flex: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' } },
                         // Reactive canvas binding
-                        () => paper.chart('ring', { value: ringPercent.value, label: 'CPU Usage' }, { color: '#10b981' })
+                        () => paper.chart({ type: 'circle', value: ringPercent, colors: ['#10b981'] })
                     ),
                     
                     paper.button("Randomize Progress Arc", {
@@ -970,7 +1023,7 @@ paper.toast("This is a real Windows system notification! 💻", "info", 3000, tr
                     paper.a({ href: 'https://github.com/EldrexDelosReyesBula/Paper.js/', target: '_blank', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
                         paper.icon('github', { size: 16 }), "GitHub Repository"
                     ),
-                    paper.a({ href: '#docs', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
+                    paper.a({ href: 'docs.html', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
                         paper.icon('book', { size: 16 }), "Documentation"
                     ),
                     paper.a({ href: '#playground', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
