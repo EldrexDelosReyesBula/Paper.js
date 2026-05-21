@@ -1,7 +1,7 @@
 <img width="2100" height="1103" alt="Paper.js banner" src="https://github.com/user-attachments/assets/712b968d-4f1e-4a59-946e-c70cca126c0a" />
 
 
-# 📄 Paper.js - The Dead-Simple HTML Library
+# Paper.js - HTML made stupid simple 
 > **Write HTML like you're writing a text message.**
 
 Paper.js is an ultra-lightweight JavaScript library that compiles direct reactive UI trees without any bundlers, Virtual DOM reflow overhead, or terminal setups.
