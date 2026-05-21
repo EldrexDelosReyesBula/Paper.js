@@ -37,8 +37,8 @@
 body {
     margin: 0;
     padding: 0;
-    background-color: var(--bg-dark);
-    color: var(--text-main);
+    background-color: var(--bg-dark) !important;
+    color: var(--text-main) !important;
     font-family: var(--font-sans);
     overflow-x: hidden;
     line-height: 1.6;
@@ -621,4 +621,273 @@ body::after {
         align-items: flex-start;
         gap: 8px;
     }
+}
+
+/* ==========================================
+   BOOTSTRAP OVERRIDES (PREVENTS LIGHT MODE POLLUTION)
+   ========================================== */
+:root, [data-bs-theme="dark"], body {
+    --bs-body-bg: #070913 !important;
+    --bs-body-color: #cbd5e1 !important;
+    --bs-tertiary-bg: rgba(16, 22, 42, 0.65) !important;
+    --bs-card-bg: rgba(16, 22, 42, 0.65) !important;
+    --bs-card-color: #cbd5e1 !important;
+    --bs-border-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+/* Guarantee custom glassmorphic cards always win over Bootstrap rules */
+.card {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-glow) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.card-title {
+    color: var(--text-head) !important;
+}
+.card-content {
+    color: var(--text-muted) !important;
+}
+
+/* Autocomplete Styles */
+.autocomplete {
+    position: relative;
+    width: 100%;
+}
+
+.suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    margin-top: 4px;
+    padding: 0;
+    list-style: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-main);
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.suggestions li {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+    transition: background 0.2s, color 0.2s;
+}
+
+.suggestions li:last-child {
+    border-bottom: none;
+}
+
+.suggestions li:hover {
+    background: var(--primary-glow);
+    color: var(--text-head);
+}
+
+/* Components Styles */
+
+/* Tabs */
+.tabs {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.tab-headers {
+    display: flex;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--border-glow);
+    overflow-x: auto;
+}
+
+.tab-header {
+    flex: 1;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.tab-header:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.tab-header.tab-active {
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.tab-contents {
+    padding: 20px;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modal-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modal-in {
+    0% { transform: scale(0.9); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-head);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.close-btn:hover {
+    color: var(--rose);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* Toast */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-left: 4px solid var(--primary);
+    color: var(--text-head);
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    transform: translateX(120%);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+}
+
+.toast.toast-show {
+    transform: translateX(0);
+}
+
+.toast.toast-hide {
+    transform: translateX(120%);
+    opacity: 0;
+}
+
+.toast-success { border-left-color: var(--teal); }
+.toast-error { border-left-color: var(--rose); }
+.toast-info { border-left-color: #38bdf8; }
+.toast-warning { border-left-color: var(--amber); }
+
+/* Carousel */
+.carousel {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-glow);
+}
+
+.carousel-inner {
+    display: flex;
+    transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.carousel-item {
+    min-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.carousel-item img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.carousel-controls {
+    position: absolute;
+    top: 50%;
+    left: 0; right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    pointer-events: none;
+}
+
+.carousel-btn {
+    pointer-events: auto;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s;
+}
+
+.carousel-btn:hover {
+    background: var(--primary);
 }

@@ -84,43 +84,93 @@
      * Auto-suggestions matching autocomplete inputs connected to remote endpoints.
      */
     paper.autoComplete = (inputEl, apiUrl) => {
-        let input = typeof inputEl === 'string' ? paper.input('', {type: 'text', placeholder: inputEl}) : inputEl;
+        let input;
+        let isLocal = Array.isArray(inputEl);
+        
+        if (isLocal) {
+            let placeholder = typeof apiUrl === 'string' ? apiUrl : 'Search...';
+            input = paper.input('text', placeholder, { style: { width: '100%' } });
+        } else {
+            input = typeof inputEl === 'string' ? paper.input('text', inputEl, { style: { width: '100%' } }) : inputEl;
+        }
+        
+        // Bulletproof fallback check to guarantee input supports addEventListener
+        if (!input || typeof input.addEventListener !== 'function') {
+            let placeholder = typeof apiUrl === 'string' ? apiUrl : (typeof inputEl === 'string' ? inputEl : 'Search...');
+            input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = placeholder;
+            input.style.width = '100%';
+            input.className = 'input-text';
+        }
+        
         let suggestions = paper.ul('.suggestions');
         let container = paper.div('.autocomplete', input, suggestions);
         let debounceTimer;
         
-        input.addEventListener('input', async (e) => {
-            clearTimeout(debounceTimer);
-            let value = e.target.value;
-            if(value.length < 2) {
+        if (isLocal) {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.toLowerCase().trim();
                 suggestions.innerHTML = '';
-                return;
-            }
-            
-            debounceTimer = setTimeout(async () => {
-                try {
-                    let response = await fetch(`${apiUrl}${value}`);
-                    let data = await response.json();
-                    
-                    suggestions.innerHTML = '';
-                    let items = Array.isArray(data) ? data : (data.results || data.products || data.data || []);
-                    items.slice(0, 5).forEach(item => {
-                        let text = item.title || item.name || item.username || item;
-                        let li = paper.li(text, {
-                            on: {click: () => {
-                                input.value = text;
+                if (!value) return;
+                
+                let matches = inputEl.filter(item => item.toLowerCase().includes(value));
+                matches.slice(0, 5).forEach(item => {
+                    let li = paper.li(item, {
+                        on: {
+                            click: () => {
+                                input.value = item;
                                 suggestions.innerHTML = '';
-                                if(paper.onSuggestion) paper.onSuggestion(item);
                                 
-                                let ev = new CustomEvent('select', { detail: item });
-                                container.dispatchEvent(ev);
-                             }}
-                        });
-                        suggestions.appendChild(li);
+                                // Dispatch both select & change events so all user subscriptions work
+                                let selectEv = new CustomEvent('select', { detail: item });
+                                container.dispatchEvent(selectEv);
+                                let changeEv = new CustomEvent('change', { detail: item });
+                                container.dispatchEvent(changeEv);
+                            }
+                        }
                     });
-                } catch(e) { console.error(e); }
-            }, 300);
-        });
+                    suggestions.appendChild(li);
+                });
+            });
+        } else {
+            input.addEventListener('input', async (e) => {
+                clearTimeout(debounceTimer);
+                let value = e.target.value;
+                if(value.length < 2) {
+                    suggestions.innerHTML = '';
+                    return;
+                }
+                
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        let response = await fetch(`${apiUrl}${value}`);
+                        let data = await response.json();
+                        
+                        suggestions.innerHTML = '';
+                        let items = Array.isArray(data) ? data : (data.results || data.products || data.data || []);
+                        items.slice(0, 5).forEach(item => {
+                            let text = item.title || item.name || item.username || item;
+                            let li = paper.li(text, {
+                                on: {
+                                    click: () => {
+                                        input.value = text;
+                                        suggestions.innerHTML = '';
+                                        if(paper.onSuggestion) paper.onSuggestion(item);
+                                        
+                                        let selectEv = new CustomEvent('select', { detail: item });
+                                        container.dispatchEvent(selectEv);
+                                        let changeEv = new CustomEvent('change', { detail: text });
+                                        container.dispatchEvent(changeEv);
+                                    }
+                                }
+                            });
+                            suggestions.appendChild(li);
+                        });
+                    } catch(err) { console.error(err); }
+                }, 300);
+            });
+        }
         
         document.addEventListener('click', (e) => {
             if(!container.contains(e.target)) suggestions.innerHTML = '';
@@ -225,21 +275,72 @@
         return modal;
     };
 
+    // Static native fallbacks for browser/OS alert & confirm
+    paper.modal.alert = (message, title = "Alert") => {
+        if (typeof window !== 'undefined') {
+            // Check if HTML5 Dialog is preferred, otherwise use window.alert
+            if (window.alert) {
+                window.alert(`${title}\n\n${message}`);
+            }
+        }
+    };
+
+    paper.modal.confirm = (message, callback) => {
+        if (typeof window !== 'undefined' && window.confirm) {
+            let res = window.confirm(message);
+            if (callback) callback(res);
+            return res;
+        }
+        if (callback) callback(false);
+        return false;
+    };
+
     /**
-     * Micro-toast notification alerts.
+     * Micro-toast notification alerts. Supports OS native push notifications fallback.
      */
-    paper.toast = (message, type = 'info', duration = 3000) => {
-        let toast = paper.div(message, `.toast.toast-${type}`);
-        document.body.appendChild(toast);
+    paper.toast = (message, type = 'info', duration = 3000, useNative = false) => {
+        if (useNative && typeof window !== 'undefined' && 'Notification' in window) {
+            const fireNative = () => {
+                try {
+                    new Notification('Paper Notification', {
+                        body: message,
+                        icon: 'https://eldrex.landecs.org/logo/eldrex-paper-js.png'
+                    });
+                } catch (e) {
+                    showCustomToast();
+                }
+            };
+
+            if (Notification.permission === 'granted') {
+                fireNative();
+                return;
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        fireNative();
+                    } else {
+                        showCustomToast();
+                    }
+                });
+                return;
+            }
+        }
         
-        toast.offsetHeight; // trigger reflow
-        toast.classList.add('toast-show');
+        showCustomToast();
         
-        setTimeout(() => {
-            toast.classList.remove('toast-show');
-            toast.classList.add('toast-hide');
-            setTimeout(() => toast.remove(), 400);
-        }, duration);
+        function showCustomToast() {
+            let toast = paper.div(message, `.toast.toast-${type}`);
+            document.body.appendChild(toast);
+            
+            toast.offsetHeight; // trigger reflow
+            toast.classList.add('toast-show');
+            
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 400);
+            }, duration);
+        }
     };
 
     /**

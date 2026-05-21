@@ -60,6 +60,141 @@ def scaffold_init(app_name):
     print(f"\n{INDIGO}{BOLD}* Scaffolding new Paper.js project: {BOLD}{app_name}{RESET}")
     print(f"{TEAL}========================================={RESET}")
 
+    if app_name.lower().endswith('.html') or app_name.lower().endswith('.htm'):
+        if os.path.exists(app_name):
+            print(f"{RED}❌ Error: File '{app_name}' already exists. Please choose a different name.{RESET}\n")
+            sys.exit(1)
+            
+        html_self_contained = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Paper App</title>
+    <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
+    <!-- Paper Complete CDN link - Zero download dependencies -->
+    <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
+    <style>
+        :root {
+            --bg: #070913;
+            --bg-card: rgba(16, 22, 42, 0.65);
+            --border-glow: rgba(99, 102, 241, 0.2);
+            --text-head: #ffffff;
+            --text-main: #cbd5e1;
+            --text-muted: #64748b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --teal: #14b8a6;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background Radial Glow */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: -10%;
+            width: 60%;
+            height: 60%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, rgba(0,0,0,0) 70%);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+            text-align: center;
+            max-width: 420px;
+            width: 100%;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary) 0%, #4338ca 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.3);
+        }
+
+        .btn:hover {
+            box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.5);
+            background: linear-gradient(135deg, var(--primary-hover) 0%, #3730a3 100%);
+        }
+    </style>
+</head>
+<body>
+    
+    <!-- Mount Root Element -->
+    <div id="app"></div>
+
+    <script>
+        // Custom starting code with Paper.js state and computing
+        let count = paper.state(0);
+        let double = paper.computed(() => count.value * 2);
+
+        let app = paper.div(".card",
+            paper.h2("⚡ Welcome to Paper!", { style: { margin: '0 0 0.5rem 0', color: '#fff' } }),
+            paper.p("Edit this HTML file directly to build high-performance, reactive pages without any bundlers or npm installs.", { style: { fontSize: '0.9rem', color: 'var(--text-muted)' } }),
+            
+            paper.div({ style: { margin: '1.5rem 0', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' } },
+                paper.p(() => "Clicks Count: " + count.value, { style: { fontSize: '1.2rem', fontWeight: 'bold', color: '#14b8a6', margin: '0' } }),
+                paper.p(() => "Double Count: " + double.value, { style: { fontSize: '0.9rem', color: '#a5b4fc', margin: '5px 0 0 0' } })
+            ),
+            
+            paper.button(".btn:Increment Reactive Value", {
+                onclick: () => {
+                    count.value++;
+                    paper.toast("Value incremented!", "success");
+                }
+            })
+        );
+
+        // Mount dynamic element to standard root container
+        paper.mount("#app", app);
+    </script>
+</body>
+</html>
+"""
+        with open(app_name, "w", encoding="utf-8") as f:
+            f.write(html_self_contained)
+            
+        print(f"{GREEN}[OK] Successfully created self-contained page '{app_name}'!{RESET}")
+        print(f"\n{BOLD}To start your development dev server, run:{RESET}")
+        print(f"{TEAL}  python paper.py dev{RESET}")
+        print(f"\n{INDIGO}Happy hacking with Paper!{RESET}\n")
+        return
+
     if os.path.exists(app_name):
         print(f"{RED}❌ Error: Folder '{app_name}' already exists. Please choose a different name.{RESET}\n")
         sys.exit(1)
@@ -73,6 +208,7 @@ def scaffold_init(app_name):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Paper App</title>
+    <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
     <!-- Paper Complete CDN link - Zero download dependencies -->
     <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
     <link rel="stylesheet" href="styles.css">

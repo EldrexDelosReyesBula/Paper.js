@@ -308,7 +308,24 @@ paper.loadFramework = (framework) => {
         link.id = id;
         link.rel = 'stylesheet';
         link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
-        document.head.appendChild(link);
+        
+        // Find custom stylesheet tags to insert Bootstrap before them, preserving specificity priority
+        let customStyle = document.getElementById('paper-complete-styles') || document.querySelector('link[href*="styles.css"]') || document.querySelector('style');
+        if (customStyle && customStyle.parentNode) {
+            customStyle.parentNode.insertBefore(link, customStyle);
+        } else {
+            document.head.appendChild(link);
+        }
+        
+        // Force Bootstrap 5 Dark Theme on HTML document root and body
+        if (typeof document !== 'undefined') {
+            if (document.documentElement) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+            if (document.body) {
+                document.body.setAttribute('data-bs-theme', 'dark');
+            }
+        }
     }
 };
 
@@ -715,43 +732,93 @@ paper.crud = (name, initialData = []) => {
      * Auto-suggestions matching autocomplete inputs connected to remote endpoints.
      */
     paper.autoComplete = (inputEl, apiUrl) => {
-        let input = typeof inputEl === 'string' ? paper.input('', {type: 'text', placeholder: inputEl}) : inputEl;
+        let input;
+        let isLocal = Array.isArray(inputEl);
+        
+        if (isLocal) {
+            let placeholder = typeof apiUrl === 'string' ? apiUrl : 'Search...';
+            input = paper.input('text', placeholder, { style: { width: '100%' } });
+        } else {
+            input = typeof inputEl === 'string' ? paper.input('text', inputEl, { style: { width: '100%' } }) : inputEl;
+        }
+        
+        // Bulletproof fallback check to guarantee input supports addEventListener
+        if (!input || typeof input.addEventListener !== 'function') {
+            let placeholder = typeof apiUrl === 'string' ? apiUrl : (typeof inputEl === 'string' ? inputEl : 'Search...');
+            input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = placeholder;
+            input.style.width = '100%';
+            input.className = 'input-text';
+        }
+        
         let suggestions = paper.ul('.suggestions');
         let container = paper.div('.autocomplete', input, suggestions);
         let debounceTimer;
         
-        input.addEventListener('input', async (e) => {
-            clearTimeout(debounceTimer);
-            let value = e.target.value;
-            if(value.length < 2) {
+        if (isLocal) {
+            input.addEventListener('input', (e) => {
+                let value = e.target.value.toLowerCase().trim();
                 suggestions.innerHTML = '';
-                return;
-            }
-            
-            debounceTimer = setTimeout(async () => {
-                try {
-                    let response = await fetch(`${apiUrl}${value}`);
-                    let data = await response.json();
-                    
-                    suggestions.innerHTML = '';
-                    let items = Array.isArray(data) ? data : (data.results || data.products || data.data || []);
-                    items.slice(0, 5).forEach(item => {
-                        let text = item.title || item.name || item.username || item;
-                        let li = paper.li(text, {
-                            on: {click: () => {
-                                input.value = text;
+                if (!value) return;
+                
+                let matches = inputEl.filter(item => item.toLowerCase().includes(value));
+                matches.slice(0, 5).forEach(item => {
+                    let li = paper.li(item, {
+                        on: {
+                            click: () => {
+                                input.value = item;
                                 suggestions.innerHTML = '';
-                                if(paper.onSuggestion) paper.onSuggestion(item);
                                 
-                                let ev = new CustomEvent('select', { detail: item });
-                                container.dispatchEvent(ev);
-                             }}
-                        });
-                        suggestions.appendChild(li);
+                                // Dispatch both select & change events so all user subscriptions work
+                                let selectEv = new CustomEvent('select', { detail: item });
+                                container.dispatchEvent(selectEv);
+                                let changeEv = new CustomEvent('change', { detail: item });
+                                container.dispatchEvent(changeEv);
+                            }
+                        }
                     });
-                } catch(e) { console.error(e); }
-            }, 300);
-        });
+                    suggestions.appendChild(li);
+                });
+            });
+        } else {
+            input.addEventListener('input', async (e) => {
+                clearTimeout(debounceTimer);
+                let value = e.target.value;
+                if(value.length < 2) {
+                    suggestions.innerHTML = '';
+                    return;
+                }
+                
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        let response = await fetch(`${apiUrl}${value}`);
+                        let data = await response.json();
+                        
+                        suggestions.innerHTML = '';
+                        let items = Array.isArray(data) ? data : (data.results || data.products || data.data || []);
+                        items.slice(0, 5).forEach(item => {
+                            let text = item.title || item.name || item.username || item;
+                            let li = paper.li(text, {
+                                on: {
+                                    click: () => {
+                                        input.value = text;
+                                        suggestions.innerHTML = '';
+                                        if(paper.onSuggestion) paper.onSuggestion(item);
+                                        
+                                        let selectEv = new CustomEvent('select', { detail: item });
+                                        container.dispatchEvent(selectEv);
+                                        let changeEv = new CustomEvent('change', { detail: text });
+                                        container.dispatchEvent(changeEv);
+                                    }
+                                }
+                            });
+                            suggestions.appendChild(li);
+                        });
+                    } catch(err) { console.error(err); }
+                }, 300);
+            });
+        }
         
         document.addEventListener('click', (e) => {
             if(!container.contains(e.target)) suggestions.innerHTML = '';
@@ -856,21 +923,72 @@ paper.crud = (name, initialData = []) => {
         return modal;
     };
 
+    // Static native fallbacks for browser/OS alert & confirm
+    paper.modal.alert = (message, title = "Alert") => {
+        if (typeof window !== 'undefined') {
+            // Check if HTML5 Dialog is preferred, otherwise use window.alert
+            if (window.alert) {
+                window.alert(`${title}\n\n${message}`);
+            }
+        }
+    };
+
+    paper.modal.confirm = (message, callback) => {
+        if (typeof window !== 'undefined' && window.confirm) {
+            let res = window.confirm(message);
+            if (callback) callback(res);
+            return res;
+        }
+        if (callback) callback(false);
+        return false;
+    };
+
     /**
-     * Micro-toast notification alerts.
+     * Micro-toast notification alerts. Supports OS native push notifications fallback.
      */
-    paper.toast = (message, type = 'info', duration = 3000) => {
-        let toast = paper.div(message, `.toast.toast-${type}`);
-        document.body.appendChild(toast);
+    paper.toast = (message, type = 'info', duration = 3000, useNative = false) => {
+        if (useNative && typeof window !== 'undefined' && 'Notification' in window) {
+            const fireNative = () => {
+                try {
+                    new Notification('Paper Notification', {
+                        body: message,
+                        icon: 'https://eldrex.landecs.org/logo/eldrex-paper-js.png'
+                    });
+                } catch (e) {
+                    showCustomToast();
+                }
+            };
+
+            if (Notification.permission === 'granted') {
+                fireNative();
+                return;
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        fireNative();
+                    } else {
+                        showCustomToast();
+                    }
+                });
+                return;
+            }
+        }
         
-        toast.offsetHeight; // trigger reflow
-        toast.classList.add('toast-show');
+        showCustomToast();
         
-        setTimeout(() => {
-            toast.classList.remove('toast-show');
-            toast.classList.add('toast-hide');
-            setTimeout(() => toast.remove(), 400);
-        }, duration);
+        function showCustomToast() {
+            let toast = paper.div(message, `.toast.toast-${type}`);
+            document.body.appendChild(toast);
+            
+            toast.offsetHeight; // trigger reflow
+            toast.classList.add('toast-show');
+            
+            setTimeout(() => {
+                toast.classList.remove('toast-show');
+                toast.classList.add('toast-hide');
+                setTimeout(() => toast.remove(), 400);
+            }, duration);
+        }
     };
 
     /**
@@ -1371,7 +1489,8 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 
 /* Tab components */
 .tabs { display: flex; flex-direction: column; gap: 1rem; width: 100%; }
-.tab-headers { display: flex; border-bottom: 1px solid var(--paper-border); gap: 4px; }
+.tab-headers { display: flex; border-bottom: 1px solid var(--paper-border); gap: 4px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+.tab-headers::-webkit-scrollbar { display: none; }
 .tab-header { 
     background: none; border: none; border-bottom: 2px solid transparent; 
     padding: 10px 16px; color: var(--paper-text-muted); cursor: pointer; font-weight: 600;
@@ -1414,6 +1533,24 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 .carousel-dots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
 .carousel-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4); cursor: pointer; }
 .carousel-dot.active { background: white; width: 18px; border-radius: 4px; }
+
+/* ==========================================
+   BOOTSTRAP SPECIFICITY OVERRIDES
+   ========================================== */
+:root, [data-bs-theme="dark"] {
+    --bs-body-bg: var(--paper-bg, #0f172a) !important;
+    --bs-body-color: var(--paper-text, #f8fafc) !important;
+    --bs-tertiary-bg: var(--paper-surface, #1e293b) !important;
+    --bs-card-bg: var(--paper-surface, #1e293b) !important;
+    --bs-card-color: var(--paper-text, #f8fafc) !important;
+    --bs-border-color: var(--paper-border, #334155) !important;
+}
+
+.card {
+    background: var(--paper-surface, #1e293b) !important;
+    border: 1px solid var(--paper-border, #334155) !important;
+    border-radius: var(--paper-radius, 12px) !important;
+}
 `;
         document.head.appendChild(style);
         console.log("📄 Paper Complete styling successfully injected.");

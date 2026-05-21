@@ -308,7 +308,24 @@ paper.loadFramework = (framework) => {
         link.id = id;
         link.rel = 'stylesheet';
         link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
-        document.head.appendChild(link);
+        
+        // Find custom stylesheet tags to insert Bootstrap before them, preserving specificity priority
+        let customStyle = document.getElementById('paper-complete-styles') || document.querySelector('link[href*="styles.css"]') || document.querySelector('style');
+        if (customStyle && customStyle.parentNode) {
+            customStyle.parentNode.insertBefore(link, customStyle);
+        } else {
+            document.head.appendChild(link);
+        }
+        
+        // Force Bootstrap 5 Dark Theme on HTML document root and body
+        if (typeof document !== 'undefined') {
+            if (document.documentElement) {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+            if (document.body) {
+                document.body.setAttribute('data-bs-theme', 'dark');
+            }
+        }
     }
 };
 

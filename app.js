@@ -162,9 +162,21 @@ return app;`
     // 1. Radiant Hero
     const Hero = () => {
         return paper.div(".hero-wrapper.container",
+            paper.img({ 
+                src: 'https://eldrex.landecs.org/logo/eldrex-paper-js.png', 
+                alt: 'Paper.js Logo',
+                style: { 
+                    maxHeight: '90px', 
+                    marginBottom: '2rem', 
+                    display: 'block', 
+                    marginLeft: 'auto', 
+                    marginRight: 'auto',
+                    filter: 'drop-shadow(0 0 15px rgba(99, 102, 241, 0.4))'
+                } 
+            }),
             paper.span(".hero-tag", 
                 paper.icon('bolt', { size: 14, style: { marginRight: '4px' } }),
-                "v2.1 - Tailwind & Bootstrap Auto-CDNs Included"
+                "v3.0 - Agile Architecture & Mathematical CRUD"
             ),
             paper.h1(".hero-title.glow-text", 
                 "Write HTML Like You're", paper.br(), "Writing a Text Message."
@@ -485,39 +497,60 @@ return typoEl;`;
             'modal': {
                 title: 'Popup Modals',
                 icon: 'alert',
-                blueprint: `let modal = paper.modal(
+                blueprint: `// 1. Launch a fully themeable custom styled modal
+let modal = paper.modal(
     paper.div(
-        paper.p("Custom inline dialog inside paper!"),
-        paper.button("Dismiss", { 
-            class: 'btn-primary',
-            onclick: () => modal.hide()
-        })
+        paper.p("Custom styled dialog contents..."),
+        paper.button("Dismiss", { onclick: () => modal.hide() })
     ),
     "Paper Dialog"
 );
-document.body.appendChild(modal);
-modal.show();`,
+modal.show();
+
+// 2. Or trigger Windows/Browser built-in native alert / confirm
+paper.modal.alert("Operation completed!", "System Alert");
+paper.modal.confirm("Are you sure you want to proceed?", (confirmed) => {
+    console.log("Confirmed: " + confirmed);
+});`,
                 creator: () => {
                     let m = null;
-                    return paper.button('Launch Modal Screen', {
-                        class: 'btn-primary',
-                        style: { margin: '0 auto', display: 'block' },
-                        onclick: () => {
-                            m = paper.modal(
-                                paper.flex.col(
-                                     paper.p("This dialog is generated on the fly inside the DOM. Seamless background masking and click-backdrop dismissal are handled entirely natively!"),
-                                     paper.button("Dismiss Dialog", {
-                                        class: 'btn-primary',
-                                        style: { width: '100%' },
-                                        onclick: () => m.hide()
-                                     })
-                                ),
-                                "Dynamic Modal Box"
-                            );
-                            document.body.appendChild(m);
-                            m.show();
-                        }
-                    });
+                    return paper.flex.col({ style: { width: '100%', gap: '1.5rem' } },
+                        paper.flex.row({ style: { gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' } },
+                            paper.button('Launch Custom Modal', {
+                                class: 'btn-primary',
+                                style: { padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' },
+                                onclick: () => {
+                                    m = paper.modal(
+                                        paper.flex.col(
+                                             paper.p("This dialog is generated on the fly inside the DOM. Seamless background masking and click-backdrop dismissal are handled entirely natively!"),
+                                             paper.button("Dismiss Dialog", {
+                                                class: 'btn-primary',
+                                                style: { width: '100%' },
+                                                onclick: () => m.hide()
+                                             })
+                                        ),
+                                        "Dynamic Modal Box"
+                                    );
+                                    document.body.appendChild(m);
+                                    m.show();
+                                }
+                            }),
+                            paper.button('Built-in OS Alert', {
+                                class: 'toolbar-btn',
+                                style: { borderColor: '#a5b4fc', color: '#a5b4fc' },
+                                onclick: () => paper.modal.alert("This is a standard OS native alert notification from the browser! 💻", "Windows Alert")
+                            }),
+                            paper.button('Built-in OS Confirm', {
+                                class: 'toolbar-btn',
+                                style: { borderColor: '#a5b4fc', color: '#a5b4fc' },
+                                onclick: () => {
+                                    paper.modal.confirm("Do you agree that Paper.js is incredibly elegant? 🚀", (accepted) => {
+                                        paper.toast(accepted ? "Thank you! Agreed! 🎉" : "Aww, let us know how to improve! 📬", accepted ? "success" : "info");
+                                    });
+                                }
+                            })
+                        )
+                    );
                 }
             },
             'carousel': {
@@ -539,27 +572,39 @@ modal.show();`,
             'toasts': {
                 title: 'Toast Notifications',
                 icon: 'bell',
-                blueprint: `paper.toast("Action completed!", "success");
-paper.toast("Warning log...", "info");
-paper.toast("Network failed", "error");`,
+                blueprint: `// 1. Fire a custom glassmorphic toast notification
+paper.toast("Operation completed successfully! 🎉", "success");
+
+// 2. Or fire a native OS / browser push notification (with fallback to custom)
+paper.toast("This is a real Windows system notification! 💻", "info", 3000, true);`,
                 creator: () => {
-                    return paper.flex.row(
-                        paper.button({
-                            class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#10b981', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
-                            onclick: () => paper.toast('Operation completed successfully! 🎉', 'success')
-                        }, paper.icon('check', { size: 14, color: '#10b981' }), "Success"),
-                        paper.button({
-                            class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#38bdf8', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
-                            onclick: () => paper.toast('Check your console for build logs.', 'info')
-                        }, paper.icon('info', { size: 14, color: '#38bdf8' }), "Info"),
-                        paper.button({
-                            class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#f43f5e', color: '#f43f5e', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
-                            onclick: () => paper.toast('Critical compile warning generated.', 'error')
-                        }, paper.icon('alert', { size: 14, color: '#f43f5e' }), "Error"),
-                        { style: { width: '100%' } }
+                    return paper.flex.col({ style: { width: '100%', gap: '1.5rem' } },
+                        paper.flex.row({ style: { gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' } },
+                            paper.button({
+                                class: 'toolbar-btn',
+                                style: { borderColor: '#10b981', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+                                onclick: () => paper.toast('Operation completed successfully! 🎉', 'success')
+                            }, paper.icon('check', { size: 14, color: '#10b981' }), "Custom Success"),
+                            paper.button({
+                                class: 'toolbar-btn',
+                                style: { borderColor: '#38bdf8', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+                                onclick: () => paper.toast('Check your console for build logs.', 'info')
+                            }, paper.icon('info', { size: 14, color: '#38bdf8' }), "Custom Info"),
+                            paper.button({
+                                class: 'toolbar-btn',
+                                style: { borderColor: '#f43f5e', color: '#f43f5e', display: 'inline-flex', alignItems: 'center', gap: '6px' },
+                                onclick: () => paper.toast('Critical compile warning generated.', 'error')
+                            }, paper.icon('alert', { size: 14, color: '#f43f5e' }), "Custom Error")
+                        ),
+                        paper.flex.row({ style: { justifyContent: 'center' } },
+                            paper.button({
+                                class: 'btn-primary',
+                                style: { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)', boxShadow: '0 4px 14px rgba(168, 85, 247, 0.4)' },
+                                onclick: () => {
+                                    paper.toast('You triggered a Windows native push notification! Check your OS tray. 💻🎉', 'info', 4000, true);
+                                }
+                            }, paper.icon('bell', { size: 14, color: '#fff' }), "Launch Windows Native OS Toast")
+                        )
                     );
                 }
             }
@@ -590,7 +635,6 @@ paper.toast("Network failed", "error");`,
                 icon: CATALOG_ITEMS[k].icon,
                 active: k === selectedCatalogKey,
                 onclick: () => {
-                    document.querySelectorAll('#catalog-sidebar-container .sidebar-item').forEach(el => el.classList.remove('active'));
                     updateCatalog(k);
                 }
             };
@@ -1291,12 +1335,12 @@ paper.toast("Network failed", "error");`,
 
 const MainApp = () => {
         return paper.fragment(
-            ReactiveMathStudio(),
-            CRUDDatabaseShowcase(),
             Hero(),
             SandboxStudio(),
             RouterDemo(),
             ComponentCatalog(),
+            ReactiveMathStudio(),
+            CRUDDatabaseShowcase(),
             ApiPlayground(),
             FrameworkGuides(),
             ComparisonSection(),
