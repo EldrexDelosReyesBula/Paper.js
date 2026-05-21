@@ -4,34 +4,23 @@
 # Paper.js - HTML made stupid simple 
 > **Write HTML like you're writing a text message.**
 
-Paper.js is an ultra-lightweight JavaScript library that compiles direct reactive UI trees without any bundlers, Virtual DOM reflow overhead, or terminal setups.
+Paper.js is an ultra-lightweight JavaScript ecosystem designed to build reactive web applications instantly. With no complex bundlers, terminal setups, or virtual DOM overhead, Paper compiles high-performance DOM trees directly inside native browsers.
 
-With a core library under 50 lines of code, Paper turns verbose, complex nesting structures:
-```html
-<div class="card">
-  <h1>Hello</h1>
-  <p>World</p>
-</div>
-```
-
-Into a single, clean function call:
-```javascript
-paper.div(".card", "h1:Hello", "p:World")
-```
+Paper.js v3.0 introduces a state-of-the-art **Agile Modular Architecture**, featuring reactive mathematical logic computations (`paper.math`), persistent browser database engines (`paper.crud`), and responsive design system widgets—all integrated seamlessly in under 5 milliseconds!
 
 ---
 
 ## ⚡ Core Philosophy
-1. **One function. One rule. Zero complexity.**
-2. **Safer by Default:** Replaces vulnerable `innerHTML` calls with secure, XSS-immune `textContent` automatic parsing.
-3. **No NPM/Webpack Needed:** Fully runs in native browsers. Zero npm installs. Zero build steps. Just copy-paste or load the CDN script!
-4. **Tailwind & Bootstrap Auto-CDNs:** Dynamic loader modules automatically inject stylesheets on demand.
+1. **One function. One rule. Zero complexity:** If you know HTML tags, you already know Paper.js.
+2. **XSS-Immune Secure Engines:** Replaces vulnerable `innerHTML` with automatically sanitized `textContent` text nodes.
+3. **No NPM or Terminal Overhead Required:** Simply link our CDN script, and your application is ready to run.
+4. **Tailwind & Bootstrap Auto-Loaders:** Dynamic styler engines automatically inject stylesheets on demand.
 
 ---
 
 ## 🚀 Zero-Download CDN Setup
 
-You can get started instantly without downloading or installing anything. Simply import `paper-complete.js` from our Vercel CDN:
+Get started instantly without installing anything. Link `paper-complete.js` from our Vercel CDN in your `index.html`:
 
 ```html
 <!DOCTYPE html>
@@ -60,9 +49,86 @@ You can get started instantly without downloading or installing anything. Simply
 
 ---
 
+## 🧮 Reactive Mathematical Studio (`paper.math`)
+
+Paper.js v3.0 includes an automatic mathematical engine that tracks reactive variables and computes equations reactively in real time. Ideal for live calculator panels, finance trackers, and dashboard statistics.
+
+```javascript
+// 1. Initialize reactive numerical state values
+let price = paper.state(100);
+let discount = paper.state(15);
+let tax = paper.state(8);
+
+// 2. Formulate equations using paper.math (auto-tracks prices and percentages!)
+let discountAmount = paper.math.mul(price, paper.math.div(discount, 100));
+let discountedPrice = paper.math.sub(price, discountAmount);
+let taxAmount = paper.math.mul(discountedPrice, paper.math.div(tax, 100));
+let finalTotal = paper.math.round(paper.math.sum(discountedPrice, taxAmount), 2);
+
+// 3. Bind equations to DOM elements reactively
+let checkoutCard = paper.div(".glass-panel",
+    paper.h3("🛒 Checkout Summary"),
+    paper.p(() => "Base Price: $" + price.value),
+    paper.p(() => "Discounted Subtotal: $" + discountedPrice.value),
+    paper.h2(() => "Grand Total: $" + finalTotal.value)
+);
+```
+
+### Available Mathematical Functions
+* `paper.math.sum(...args)`: Calculates the sum of standard numbers or reactive state nodes.
+* `paper.math.sub(a, b)`: Computes the difference of two reactive states or numbers.
+* `paper.math.mul(...args)`: Computes the reactive product of multiple states or numbers.
+* `paper.math.div(a, b)`: Performs reactive division (with safe check returning `0` if dividing by `0`).
+* `paper.math.avg(...args)`: Returns the reactive mathematical average of all variables.
+* `paper.math.percent(val, total)`: Calculates the reactive percentage of `val` inside `total`.
+* `paper.math.round(val, decimals)`: Dynamic precision rounder for float calculations.
+
+---
+
+## 💾 LocalStorage Persistent Database (`paper.crud`)
+
+Say goodbye to complex backend SQL setups or asynchronous fetch calls for simple applications. `paper.crud` sets up a persistent, zero-config local database catalog that auto-synchronizes with `localStorage` reactively.
+
+```javascript
+// 1. Create a persistent store backed by local caching
+let contactStore = paper.crud("dev-directory", [
+    { name: "Eldrex Reyes", role: "Library Author" }
+]);
+
+// 2. Perform CRUD operations reactively!
+// - Create:
+let newContact = contactStore.create({ name: "Satoshi Nakamoto", role: "Protocol Engineer" });
+
+// - Read:
+let satoshi = contactStore.read(newContact.id);
+
+// - Update:
+contactStore.update(satoshi.id, { role: "Bitcoin Inventor" });
+
+// - Delete:
+contactStore.delete(satoshi.id);
+
+// - Clear:
+contactStore.clear();
+```
+
+### Live Filtering Example
+```javascript
+let searchQuery = paper.state('');
+
+// Computed list reactively filters when search input changes
+let filteredContacts = paper.computed(() => {
+    let query = searchQuery.value.toLowerCase().trim();
+    let items = contactStore.items.value; // Reactive database state node
+    return items.filter(x => x.name.toLowerCase().includes(query));
+});
+```
+
+---
+
 ## 🔋 Automatic Reactivity & Computed System
 
-Paper.js includes a Vue/SolidJS-style dependency-tracking reactivity engine. When state values mutate, subscribing DOM text nodes and element properties update automatically:
+Paper.js includes a lightweight Vue/SolidJS-style dependency-tracking reactivity engine. When state values mutate, subscribing DOM text nodes and element properties update automatically:
 
 ```javascript
 // 1. Create a reactive state
@@ -87,9 +153,9 @@ paper.mount("#app", counterWidget);
 
 ---
 
-## 🔌 High-Level UI Components & Layouts
+## 🔌 Premium UI Components & Visual Layouts
 
-Paper.js comes preloaded with powerful visual layout structures and modular interactive components inside the `paper` namespace:
+Paper.js comes preloaded with beautiful layout primitives and visual components inside the `paper` namespace:
 
 ### 1. Flexbox Layouts
 ```javascript
@@ -123,27 +189,9 @@ modal.show(); // Display modal with smooth background masks
 
 ### 4. Interactive Toast Alerts
 ```javascript
-paper.toast("Action successful!", "success"); // Teal green slider notification
+paper.toast("Action successful!", "success"); // Teal green notification
 paper.toast("Something went wrong.", "error");   // Rose red compile error indicator
-paper.toast("Log notification...", "info");     // Cyan blue build logger
-```
-
-### 5. Multi-Tab Containers
-```javascript
-let customTabs = paper.tabs([
-    { title: 'Home', content: paper.p("Welcome page text.") },
-    { title: 'Profile', content: paper.p("Manage user configurations.") }
-]);
-```
-
-### 6. Seamless API Fetch Loading Clients
-```javascript
-paper.fetch('https://jsonplaceholder.typicode.com/users', {
-    onSuccess: (cardBody, data) => {
-        // Automatically manages loading spinners and errors
-        data.slice(0, 3).forEach(user => cardBody.appendChild(paper.p(user.name)));
-    }
-});
+paper.toast("Log notification...", "info");     // Cyan blue info toast
 ```
 
 ---
@@ -156,21 +204,17 @@ A zero-dependency CLI developer companion for blazing-fast development workflows
 ```bash
 python paper.py init [app-name]
 ```
-This generates a gorgeous, pre-configured reactive starting template inside a new directory in **less than 5 milliseconds**!
-Scaffold includes:
-* `index.html` linked directly to our Vercel CDN.
-* `app.js` with count/computed starter reactivity code.
-* `styles.css` with dark-mode glassmorphic aesthetics.
+Generates a gorgeous, pre-configured reactive starting template in **less than 5 milliseconds**!
 
 ### 2. Launch high-speed development server
 ```bash
 python paper.py dev [port]
 ```
-Spins up a lightweight web server (default port `8000`), overrides standard Windows registry issues, and correctly serves Javascript `.js` files as `application/javascript` to bypass browser MIME blocks.
+Spins up a lightweight web server (default port `8000`), overrides standard Windows registry issues, and serves JavaScript files correctly as `application/javascript` to bypass browser MIME blocks.
 
 ---
 
-## 🛠️ Spellcheck tag spell-check debugger warnings
+## 🛠️ Spellcheck debugger warnings
 
 Paper.js protects beginners from spelling tag typos through a Levenshtein distance matching engine. If a tag is typed incorrectly (e.g. `paper.buton`), an event warning is dispatched automatically detailing spelling suggestions:
 
@@ -188,5 +232,6 @@ Paper.js is fully open-source and customizable. We encourage you to fork, submit
 
 * **GitHub Repository:** [https://github.com/EldrexDelosReyesBula/Paper.js/](https://github.com/EldrexDelosReyesBula/Paper.js/)
 * **CDN Link:** `https://eldrex-paper-js.vercel.app/paper-complete.js`
+* **Agile Architectural Contribution Guide:** [CONTRIBUTING.md](file:///c:/Users/Eldrex/Downloads/paper/CONTRIBUTING.md)
 
 *Released under the MIT License. Crafted with absolute zero dependencies.*
