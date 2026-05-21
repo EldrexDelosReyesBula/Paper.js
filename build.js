@@ -7,7 +7,9 @@ const coreFiles = [
     'core/reactivity.js',
     'core/router.js',
     'core/math.js',
-    'core/crud.js'
+    'core/db.js',
+    'core/orm.js',
+    'core/auth.js'
 ];
 const pluginFiles = [
     'plugins/official.js',

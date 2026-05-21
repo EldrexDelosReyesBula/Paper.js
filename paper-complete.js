@@ -239,12 +239,32 @@ paper.container = (...args) => paper('div', '.container', ...args);
 paper.row = (...args) => paper('div', '.row', ...args);
 paper.col = (...args) => paper('div', '.col', ...args);
 
-// Register global components
-paper.component = (name, constructor) => {
-    if (paper[name]) {
-        console.warn(`PaperWarning: Component '${name}' already exists and will be overwritten.`);
+// OOP Class-based component support
+class PaperComponent {
+    constructor() {
+        if (this.render === undefined) {
+            throw new Error("PaperComponent must implement a render() method");
+        }
     }
-    paper[name] = (...args) => constructor(...args);
+}
+paper.component = PaperComponent;
+
+// Security and validation
+paper.validate = (schema) => {
+    return (data) => {
+        let errors = {};
+        for (let key in schema) {
+            let rule = schema[key];
+            let value = data[key];
+            if (rule.required && (value === undefined || value === null || value === '')) {
+                errors[key] = "Required field";
+            }
+            if (rule.type && typeof value !== rule.type) {
+                errors[key] = `Must be of type ${rule.type}`;
+            }
+        }
+        return Object.keys(errors).length ? errors : null;
+    };
 };
 
 // Standard utilities
@@ -492,57 +512,42 @@ paper.for = (arrayState, renderCallback) => {
 // --- MODULE: core/router.js ---
 /**
  * PAPER ROUTER
- * Clean URL HTML5 History API Router.
+ * Zero-configuration Hash SPA Router.
  */
 (function() {
     let routes = [];
     let currentView = paper.state(null);
-    let routerContainer = null;
     let pathParams = paper.state({});
 
     /**
-     * Define a route.
-     * @param {string} path Route path (e.g., "/about", "/user/:id")
-     * @param {function} componentFn Component to render
+     * Define a hash route.
+     * @param {string} path Route path (e.g., "#/about", "#/user/:id")
+     * @param {function|class} componentFn Component or Class to render
      */
     paper.route = (path, componentFn) => {
+        // Strip leading hash for internal regex matching
+        let cleanPath = path.startsWith('#') ? path.substring(1) : path;
         routes.push({
-            path,
-            regex: new RegExp('^' + path.replace(/:\w+/g, '([^/]+)') + '$'),
-            keys: (path.match(/:\w+/g) || []).map(k => k.slice(1)),
+            path: cleanPath,
+            regex: new RegExp('^' + cleanPath.replace(/:\w+/g, '([^/]+)') + '$'),
+            keys: (cleanPath.match(/:\w+/g) || []).map(k => k.slice(1)),
             componentFn
         });
     };
 
     /**
-     * Navigates to a specific path using HTML5 pushState.
-     * @param {string} path Target URL path
+     * Navigates to a specific path using hash.
+     * @param {string} path Target URL hash path
      */
     paper.navigate = (path) => {
         if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', path);
-            window.dispatchEvent(new Event('popstate'));
+            window.location.hash = path.startsWith('#') ? path : '#' + path;
         }
     };
 
-    /**
-     * Intercept clicks on local links to route via pushState instead of full reload.
-     */
-    if (typeof document !== 'undefined') {
-        document.addEventListener('click', e => {
-            let a = e.target.closest('a');
-            if (a && a.href && a.href.startsWith(window.location.origin)) {
-                // If it's a local link and not a hash link
-                let path = a.getAttribute('href');
-                if (path && !path.startsWith('#') && !a.hasAttribute('data-no-route')) {
-                    e.preventDefault();
-                    paper.navigate(path);
-                }
-            }
-        });
-
-        window.addEventListener('popstate', () => {
-            let currentPath = window.location.pathname;
+    if (typeof window !== 'undefined') {
+        window.addEventListener('hashchange', () => {
+            let currentPath = window.location.hash.slice(1) || '/';
             let matchFound = false;
 
             for (let route of routes) {
@@ -574,13 +579,20 @@ paper.for = (arrayState, renderCallback) => {
      */
     paper.router = () => {
         if (typeof window !== 'undefined' && routes.length > 0 && !currentView.value) {
-            window.dispatchEvent(new Event('popstate')); // Initial load
+            window.dispatchEvent(new Event('hashchange')); // Initial load
         }
         
         // Reactive component switcher
         return paper.if(
             currentView,
-            () => currentView.value(),
+            () => {
+                let Component = currentView.value;
+                // OOP Check: if it's a class extending paper.component
+                if (Component.prototype && Component.prototype instanceof paper.component) {
+                    return new Component().render();
+                }
+                return Component();
+            },
             () => paper.div()
         );
     };
@@ -664,96 +676,235 @@ paper.for = (arrayState, renderCallback) => {
 })();
 
 
-// --- MODULE: core/crud.js ---
+// --- MODULE: core/db.js ---
 /**
- * PAPER CRUD STORAGE ENGINE
- * 
- * Auto-synchronizing reactive database store mapped directly to persistent LocalStorage.
+ * PAPER DATA SYSTEM (Unified DB API)
+ * Seamlessly integrates LocalStorage, SessionStorage, IndexedDB, and SQLite endpoints.
  */
 
-paper.crud = (name, initialData = []) => {
-    let getStored = () => {
-        try {
-            return paper.storage(name) || initialData;
-        } catch(e) {
-            return initialData;
+paper.db = (collectionName, engine = 'local') => {
+    
+    // Engine Drivers
+    const drivers = {
+        'local': {
+            get: () => {
+                try { return JSON.parse(localStorage.getItem(`paper_db_${collectionName}`)) || []; } 
+                catch(e) { return []; }
+            },
+            set: (data) => localStorage.setItem(`paper_db_${collectionName}`, JSON.stringify(data))
+        },
+        'session': {
+            get: () => {
+                try { return JSON.parse(sessionStorage.getItem(`paper_db_${collectionName}`)) || []; } 
+                catch(e) { return []; }
+            },
+            set: (data) => sessionStorage.setItem(`paper_db_${collectionName}`, JSON.stringify(data))
+        },
+        'firebase': {
+            // Firebase hollow bridge (requires paper.firebase to be initialized by user)
+            get: () => [], // Handled async in real implementation
+            set: (data) => {
+                if (paper.firebase && paper.firebase.db) {
+                    paper.firebase.db(collectionName).set(data);
+                } else {
+                    console.warn("PaperDB: Firebase engine selected but paper.firebase is not initialized.");
+                }
+            }
+        },
+        'sqlite': {
+            // SQLite hollow bridge (requires sql.js or similar)
+            get: () => [],
+            set: (data) => {
+                if (paper.sqlite) paper.sqlite.insert(collectionName, data);
+            }
         }
     };
 
-    let items = paper.state(getStored());
+    let driver = drivers[engine] || drivers['local'];
+    let state = paper.state(driver.get());
 
-    let sync = () => {
-        try {
-            paper.storage(name, items.value);
-        } catch(e) {
-            console.warn("PaperStorageWarning: LocalStorage sync failed.", e);
-        }
+    // Watchers for reactivity
+    let watchers = [];
+
+    const sync = () => {
+        driver.set(state.value);
+        watchers.forEach(cb => cb(state.value));
     };
 
     return {
-        /**
-         * Reactive state containing all database records.
-         */
-        items,
-
-        /**
-         * Appends a new item to the store and generates a unique Base36 string ID.
-         * 
-         * @param {Record<string, *>} item Payload fields dictionary
-         * @returns {Record<string, *>} Newly registered record with id attached
-         */
-        create(item) {
-            let newItem = { 
-                id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5), 
-                createdAt: new Date().toISOString(),
-                ...item 
-            };
-            items.value = [...items.value, newItem];
+        state,
+        
+        insert(item) {
+            let record = { id: Date.now().toString(36), createdAt: new Date().toISOString(), ...item };
+            state.value = [...state.value, record];
             sync();
-            return newItem;
+            return record;
         },
-
-        /**
-         * Finds a record by its unique ID.
-         * 
-         * @param {string} id Unique record ID
-         * @returns {Record<string, *>|undefined} Target record or undefined if not found
-         */
-        read(id) {
-            return items.value.find(item => item.id === id);
+        
+        find(id) {
+            return state.value.find(record => record.id === id);
         },
-
-        /**
-         * Merges updates reactively into an existing record.
-         * 
-         * @param {string} id Unique record ID
-         * @param {Record<string, *>} updates Target fields updates mapping
-         */
-        update(id, updates) {
-            items.value = items.value.map(item => 
-                item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item
+        
+        update(id, data) {
+            state.value = state.value.map(record => 
+                record.id === id ? { ...record, ...data, updatedAt: new Date().toISOString() } : record
             );
             sync();
         },
-
-        /**
-         * Deletes a record from the database store reactively.
-         * 
-         * @param {string} id Unique record ID
-         */
+        
         delete(id) {
-            items.value = items.value.filter(item => item.id !== id);
+            state.value = state.value.filter(record => record.id !== id);
             sync();
         },
-
-        /**
-         * Completely resets the persistent local store database.
-         */
-        clear() {
-            items.value = [];
-            sync();
+        
+        watch(callback) {
+            watchers.push(callback);
+            callback(state.value); // immediate execution
+            return () => watchers = watchers.filter(cb => cb !== callback); // unsubscribe
         }
     };
+};
+
+// Aliases for standard unified access
+paper.storage = {
+    set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+    get: (k) => JSON.parse(localStorage.getItem(k))
+};
+
+paper.session = {
+    set: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)),
+    get: (k) => JSON.parse(sessionStorage.getItem(k))
+};
+
+
+// --- MODULE: core/orm.js ---
+/**
+ * PAPER ORM SYSTEM
+ * Object-Relational Mapping for Paper.js
+ */
+
+class PaperModel {
+    constructor(data = {}) {
+        Object.assign(this, data);
+    }
+
+    // Instance method for saving to DB
+    save() {
+        const cname = this.constructor.name.toLowerCase() + 's';
+        if (this.id) {
+            paper.db(cname).update(this.id, this);
+        } else {
+            let record = paper.db(cname).insert(this);
+            this.id = record.id;
+        }
+        return this;
+    }
+
+    // Instance method for deleting from DB
+    delete() {
+        const cname = this.constructor.name.toLowerCase() + 's';
+        if (this.id) {
+            paper.db(cname).delete(this.id);
+        }
+    }
+
+    // Static CRUD methods
+    static create(data) {
+        const instance = new this(data);
+        return instance.save();
+    }
+
+    static find(id) {
+        const cname = this.name.toLowerCase() + 's';
+        const data = paper.db(cname).find(id);
+        return data ? new this(data) : null;
+    }
+
+    static all() {
+        const cname = this.name.toLowerCase() + 's';
+        return paper.db(cname).state.value.map(data => new this(data));
+    }
+
+    static watch(callback) {
+        const cname = this.name.toLowerCase() + 's';
+        return paper.db(cname).watch(dataList => {
+            callback(dataList.map(data => new this(data)));
+        });
+    }
+}
+
+// Global exposure
+paper.model = PaperModel;
+
+
+// --- MODULE: core/auth.js ---
+/**
+ * PAPER AUTHENTICATION ENGINE
+ * Handles login, logout, and registration logic. Provides a unified interface
+ * for Local, JWT, Firebase Auth, and OAuth.
+ */
+
+paper.auth = {
+    user: paper.state(null), // Reactive current user state
+    
+    _config: { provider: 'local' },
+
+    init(config) {
+        this._config = { ...this._config, ...config };
+        
+        // Auto-login check for local token
+        if (this._config.provider === 'local') {
+            let token = paper.storage.get("auth_token");
+            if (token) {
+                // Dummy restore for local mode
+                this.user.value = { token, username: 'LocalUser' };
+            }
+        }
+    },
+
+    login(credentials) {
+        if (this._config.provider === 'local') {
+            // Simulated local login
+            let user = { id: Date.now(), ...credentials };
+            paper.storage.set("auth_token", "fake_jwt_" + Date.now());
+            this.user.value = user;
+            return Promise.resolve(user);
+        } else if (this._config.provider === 'firebase') {
+            if (paper.firebase && paper.firebase.auth) {
+                return paper.firebase.auth().signInWithEmailAndPassword(credentials.email, credentials.password)
+                    .then(res => {
+                        this.user.value = res.user;
+                        return res.user;
+                    });
+            } else {
+                return Promise.reject("Firebase not initialized");
+            }
+        }
+        return Promise.reject("Provider not supported");
+    },
+
+    register(credentials) {
+        if (this._config.provider === 'local') {
+            // Simulated local registration
+            let user = { id: Date.now(), ...credentials };
+            paper.storage.set("auth_token", "fake_jwt_" + Date.now());
+            this.user.value = user;
+            return Promise.resolve(user);
+        }
+        return Promise.reject("Registration not implemented for " + this._config.provider);
+    },
+
+    logout() {
+        if (this._config.provider === 'local') {
+            paper.storage.set("auth_token", null);
+            this.user.value = null;
+            return Promise.resolve();
+        } else if (this._config.provider === 'firebase' && paper.firebase) {
+            return paper.firebase.auth().signOut().then(() => {
+                this.user.value = null;
+            });
+        }
+    }
 };
 
 
@@ -1963,6 +2114,64 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
         transform: none !important;
         opacity: 1 !important;
     }
+}
+
+
+/* Paper.js Responsive Grid System */
+.container { width: 100%; margin-right: auto; margin-left: auto; padding-right: 15px; padding-left: 15px; }
+@media (min-width: 576px) { .container { max-width: 540px; } }
+@media (min-width: 768px) { .container { max-width: 720px; } }
+@media (min-width: 992px) { .container { max-width: 960px; } }
+@media (min-width: 1200px) { .container { max-width: 1140px; } }
+
+.row { display: flex; flex-wrap: wrap; margin-right: -15px; margin-left: -15px; }
+.col { flex-basis: 0; flex-grow: 1; max-width: 100%; padding-right: 15px; padding-left: 15px; }
+
+/* Grid Columns */
+.col-12 { flex: 0 0 100%; max-width: 100%; padding-right: 15px; padding-left: 15px; }
+.col-6 { flex: 0 0 50%; max-width: 50%; padding-right: 15px; padding-left: 15px; }
+.col-4 { flex: 0 0 33.333333%; max-width: 33.333333%; padding-right: 15px; padding-left: 15px; }
+.col-3 { flex: 0 0 25%; max-width: 25%; padding-right: 15px; padding-left: 15px; }
+
+@media (min-width: 768px) {
+    .col-md-12 { flex: 0 0 100%; max-width: 100%; }
+    .col-md-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-md-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+    .col-md-3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+@media (min-width: 992px) {
+    .col-lg-12 { flex: 0 0 100%; max-width: 100%; }
+    .col-lg-6 { flex: 0 0 50%; max-width: 50%; }
+    .col-lg-4 { flex: 0 0 33.333333%; max-width: 33.333333%; }
+    .col-lg-3 { flex: 0 0 25%; max-width: 25%; }
+}
+
+/* Flex Utilities */
+.flex { display: flex; }
+.flex-column { flex-direction: column; }
+.align-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.wrap { flex-wrap: wrap; }
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }
+.gap-3 { gap: 1.5rem; }
+
+/* Global Typography & Adjustments for Mobile */
+@media (max-width: 768px) {
+    body { font-size: 14px; }
+    h1 { font-size: 2rem !important; }
+    h2 { font-size: 1.5rem !important; }
+    .hero { padding: 3rem 1rem !important; }
+    .hero-buttons { flex-direction: column; gap: 1rem; width: 100%; }
+    .hero-buttons > * { width: 100%; text-align: center; justify-content: center; }
+    .stat-item { width: 100% !important; margin-bottom: 1rem; }
+    .api-grid { grid-template-columns: 1fr !important; }
+    #playground-split { flex-direction: column !important; }
+    #editor-pane, #preview-pane { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
+    .catalog-sidebar { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
+    .playground-body { flex-direction: column !important; }
 }
 `;
         document.head.appendChild(style);

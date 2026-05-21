@@ -114,16 +114,16 @@ const CommonErrors = () => {
 };
 
 // Routing setup
-paper.route('/docs.html', Overview);
-paper.route('/docs/getting-started', GettingStarted);
-paper.route('/docs/comparison', Comparison);
-paper.route('/docs/troubleshooting', CommonErrors);
+paper.route('#/docs.html', Overview);
+paper.route('#/docs/getting-started', GettingStarted);
+paper.route('#/docs/comparison', Comparison);
+paper.route('#/docs/troubleshooting', CommonErrors);
 
 // Sidebar Navigation
 const Sidebar = () => {
     // Current path tracking for active styles
-    let currentPath = paper.state(window.location.pathname);
-    window.addEventListener('popstate', () => currentPath.value = window.location.pathname);
+    let currentPath = paper.state(window.location.hash || '#/docs.html');
+    window.addEventListener('hashchange', () => currentPath.value = window.location.hash);
     
     const Link = (path, label) => {
         return paper.a(label, {
@@ -140,14 +140,14 @@ const Sidebar = () => {
         
         paper.div('.nav-section', { style: { marginBottom: '1.5rem' } },
             paper.div("INTRODUCTION", { style: { fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)', margin: '0 0 0.5rem 1rem' } }),
-            Link('/docs.html', 'Overview'),
-            Link('/docs/getting-started', 'Getting Started'),
-            Link('/docs/comparison', 'Vanilla vs Paper')
+            Link('#/docs.html', 'Overview'),
+            Link('#/docs/getting-started', 'Getting Started'),
+            Link('#/docs/comparison', 'Vanilla vs Paper')
         ),
         
         paper.div('.nav-section',
             paper.div("GUIDES", { style: { fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-muted)', margin: '0 0 0.5rem 1rem' } }),
-            Link('/docs/troubleshooting', 'Common Errors')
+            Link('#/docs/troubleshooting', 'Common Errors')
         )
     );
 };

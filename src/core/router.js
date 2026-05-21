@@ -1,56 +1,41 @@
 /**
  * PAPER ROUTER
- * Clean URL HTML5 History API Router.
+ * Zero-configuration Hash SPA Router.
  */
 (function() {
     let routes = [];
     let currentView = paper.state(null);
-    let routerContainer = null;
     let pathParams = paper.state({});
 
     /**
-     * Define a route.
-     * @param {string} path Route path (e.g., "/about", "/user/:id")
-     * @param {function} componentFn Component to render
+     * Define a hash route.
+     * @param {string} path Route path (e.g., "#/about", "#/user/:id")
+     * @param {function|class} componentFn Component or Class to render
      */
     paper.route = (path, componentFn) => {
+        // Strip leading hash for internal regex matching
+        let cleanPath = path.startsWith('#') ? path.substring(1) : path;
         routes.push({
-            path,
-            regex: new RegExp('^' + path.replace(/:\w+/g, '([^/]+)') + '$'),
-            keys: (path.match(/:\w+/g) || []).map(k => k.slice(1)),
+            path: cleanPath,
+            regex: new RegExp('^' + cleanPath.replace(/:\w+/g, '([^/]+)') + '$'),
+            keys: (cleanPath.match(/:\w+/g) || []).map(k => k.slice(1)),
             componentFn
         });
     };
 
     /**
-     * Navigates to a specific path using HTML5 pushState.
-     * @param {string} path Target URL path
+     * Navigates to a specific path using hash.
+     * @param {string} path Target URL hash path
      */
     paper.navigate = (path) => {
         if (typeof window !== 'undefined') {
-            window.history.pushState({}, '', path);
-            window.dispatchEvent(new Event('popstate'));
+            window.location.hash = path.startsWith('#') ? path : '#' + path;
         }
     };
 
-    /**
-     * Intercept clicks on local links to route via pushState instead of full reload.
-     */
-    if (typeof document !== 'undefined') {
-        document.addEventListener('click', e => {
-            let a = e.target.closest('a');
-            if (a && a.href && a.href.startsWith(window.location.origin)) {
-                // If it's a local link and not a hash link
-                let path = a.getAttribute('href');
-                if (path && !path.startsWith('#') && !a.hasAttribute('data-no-route')) {
-                    e.preventDefault();
-                    paper.navigate(path);
-                }
-            }
-        });
-
-        window.addEventListener('popstate', () => {
-            let currentPath = window.location.pathname;
+    if (typeof window !== 'undefined') {
+        window.addEventListener('hashchange', () => {
+            let currentPath = window.location.hash.slice(1) || '/';
             let matchFound = false;
 
             for (let route of routes) {
@@ -82,13 +67,20 @@
      */
     paper.router = () => {
         if (typeof window !== 'undefined' && routes.length > 0 && !currentView.value) {
-            window.dispatchEvent(new Event('popstate')); // Initial load
+            window.dispatchEvent(new Event('hashchange')); // Initial load
         }
         
         // Reactive component switcher
         return paper.if(
             currentView,
-            () => currentView.value(),
+            () => {
+                let Component = currentView.value;
+                // OOP Check: if it's a class extending paper.component
+                if (Component.prototype && Component.prototype instanceof paper.component) {
+                    return new Component().render();
+                }
+                return Component();
+            },
             () => paper.div()
         );
     };

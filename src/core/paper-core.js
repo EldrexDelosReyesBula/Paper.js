@@ -228,12 +228,32 @@ paper.container = (...args) => paper('div', '.container', ...args);
 paper.row = (...args) => paper('div', '.row', ...args);
 paper.col = (...args) => paper('div', '.col', ...args);
 
-// Register global components
-paper.component = (name, constructor) => {
-    if (paper[name]) {
-        console.warn(`PaperWarning: Component '${name}' already exists and will be overwritten.`);
+// OOP Class-based component support
+class PaperComponent {
+    constructor() {
+        if (this.render === undefined) {
+            throw new Error("PaperComponent must implement a render() method");
+        }
     }
-    paper[name] = (...args) => constructor(...args);
+}
+paper.component = PaperComponent;
+
+// Security and validation
+paper.validate = (schema) => {
+    return (data) => {
+        let errors = {};
+        for (let key in schema) {
+            let rule = schema[key];
+            let value = data[key];
+            if (rule.required && (value === undefined || value === null || value === '')) {
+                errors[key] = "Required field";
+            }
+            if (rule.type && typeof value !== rule.type) {
+                errors[key] = `Must be of type ${rule.type}`;
+            }
+        }
+        return Object.keys(errors).length ? errors : null;
+    };
 };
 
 // Standard utilities
