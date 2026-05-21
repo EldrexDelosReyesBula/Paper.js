@@ -1216,18 +1216,19 @@ User.watch(users => console.log("DB Updated:", users));`,
     // NEW: Persistent Local CRUD Database Showcase
     // ==========================================
     const CRUDDatabaseShowcase = () => {
-        let store = paper.crud('paper-viral-contacts', [
-            { name: "Eldrex Reyes", role: "Library Author", status: "Active" },
-            { name: "Satoshi Nakamoto", role: "Agile Architect", status: "Busy" },
-            { name: "Ada Lovelace", role: "Reactivity Expert", status: "Away" }
-        ]);
+        let store = paper.db('paper-viral-contacts');
+        if (store.state.value.length === 0) {
+            store.insert({ name: "Eldrex Reyes", role: "Library Author", status: "Active" });
+            store.insert({ name: "Satoshi Nakamoto", role: "Agile Architect", status: "Busy" });
+            store.insert({ name: "Ada Lovelace", role: "Reactivity Expert", status: "Away" });
+        }
 
         let searchQuery = paper.state('');
         let newStatus = paper.state('Active');
 
         let filteredContacts = paper.computed(() => {
             let query = searchQuery.value.toLowerCase().trim();
-            let all = store.items.value;
+            let all = store.state.value;
             if (!query) return all;
             return all.filter(item => 
                 (item.name || '').toLowerCase().includes(query) || 
@@ -1363,13 +1364,13 @@ User.watch(users => console.log("DB Updated:", users));`,
             });
         });
 
-        return paper.div("#crud-studio.container", { style: { paddingTop: '6rem' } },
+                            return paper.div("#crud-studio.container", { style: { paddingTop: '6rem' } },
             paper.h2(".section-title", { style: { display: 'inline-flex', alignItems: 'center', gap: '8px' } },
                 paper.icon('database', { size: 24, color: 'var(--teal)' }),
                 "Persistent Local CRUD Store"
             ),
             paper.p({ style: { color: 'var(--text-muted)', marginTop: '-1.5rem', marginBottom: '3rem', maxWidth: '600px' } },
-                "Store, filter, and modify records in a database backed completely by `paper.crud`. Refresh the page - all changes are persistent natively in your local browser storage!"
+                "Store, filter, and modify records in a database backed completely by `paper.db`. Refresh the page - all changes are persistent natively in your local browser storage!"
             ),
             
             paper.div(".grid", { style: { gridTemplateColumns: '300px 1fr', gap: '2rem' } },
@@ -1417,7 +1418,7 @@ User.watch(users => console.log("DB Updated:", users));`,
                             
                             if(!nameVal) return paper.toast("Please specify a developer name!", "error");
                             
-                            store.create({
+                            store.insert({
                                 name: nameVal,
                                 role: roleVal || 'Contributor',
                                 status: newStatus.value

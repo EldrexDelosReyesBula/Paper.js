@@ -757,6 +757,11 @@ paper.db = (collectionName, engine = 'local') => {
             sync();
         },
         
+        clear() {
+            state.value = [];
+            sync();
+        },
+        
         watch(callback) {
             watchers.push(callback);
             callback(state.value); // immediate execution
