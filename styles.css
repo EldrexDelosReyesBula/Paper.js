@@ -242,6 +242,12 @@ body::after {
     margin-bottom: 5rem;
 }
 
+.guides-grid {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 2rem;
+}
+
 .studio-panel {
     display: flex;
     flex-direction: column;
@@ -320,7 +326,8 @@ body::after {
     font-family: var(--font-mono);
     font-size: 14px;
     padding: 1.5rem;
-    resize: none;
+    resize: vertical;
+    min-height: 250px;
     line-height: 1.5;
     outline: none;
 }
@@ -569,10 +576,49 @@ body::after {
     .studio-grid {
         grid-template-columns: 1fr;
     }
+    .guides-grid {
+        grid-template-columns: 1fr;
+    }
     .catalog-grid {
         grid-template-columns: 1fr;
     }
     .hero-title {
         font-size: 2.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .hero-stats {
+        flex-direction: column;
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    .hero-wrapper {
+        padding: 3rem 0 2rem 0;
+    }
+    .hero-title {
+        font-size: 2.25rem;
+    }
+    .hero-subtitle {
+        font-size: 1.1rem;
+    }
+    .api-grid {
+        grid-template-columns: 1fr;
+    }
+    .container {
+        padding: 0 1.25rem;
+    }
+    .catalog-preview-area {
+        padding: 1rem;
+        min-height: auto;
+    }
+    .editor-toolbar {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
     }
 }

@@ -162,7 +162,10 @@ return app;`
     // 1. Radiant Hero
     const Hero = () => {
         return paper.div(".hero-wrapper.container",
-            paper.span(".hero-tag:⚡ v2.1 - Tailwind & Bootstrap Auto-CDNs Included"),
+            paper.span(".hero-tag", 
+                paper.icon('bolt', { size: 14, style: { marginRight: '4px' } }),
+                "v2.1 - Tailwind & Bootstrap Auto-CDNs Included"
+            ),
             paper.h1(".hero-title.glow-text", 
                 "Write HTML Like You're", paper.br(), "Writing a Text Message."
             ),
@@ -172,20 +175,26 @@ return app;`
             paper.flex.center(
                 paper.a({ href: '#playground', class: 'gradient-btn' },
                     paper.span("Launch Sandbox Studio"),
-                    paper.span("→", { style: { fontSize: '1.15rem' } })
+                    paper.icon('arrowRight', { size: 16 })
                 ),
-                paper.a("Visual Components Catalog", { href: '#docs', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', 'align-items': 'center' } })
+                paper.a({ href: '#docs', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' } },
+                    paper.icon('book', { size: 16 }),
+                    "Visual Components Catalog"
+                )
             ),
             paper.div(".hero-stats",
                 paper.div(".stat-item",
+                    paper.icon('lock', { size: 28, color: 'var(--teal)', style: { marginBottom: '8px' } }),
                     paper.span(".stat-val:Safer DOM"),
                     paper.span(".stat-lbl:XSS textContent Injection")
                 ),
                 paper.div(".stat-item",
+                    paper.icon('bolt', { size: 28, color: 'var(--primary)', style: { marginBottom: '8px' } }),
                     paper.span(".stat-val:Automatic"),
                     paper.span(".stat-lbl:Reactive States & Computeds")
                 ),
                 paper.div(".stat-item",
+                    paper.icon('package', { size: 28, color: '#38bdf8', style: { marginBottom: '8px' } }),
                     paper.span(".stat-val:0 NPM"),
                     paper.span(".stat-lbl:Copy-Paste Standalone JS")
                 )
@@ -322,7 +331,10 @@ return typoEl;`;
                             transition: 'background 0.3s'
                         })
                     },
-                        paper.span(() => consoleMsg.value),
+                        paper.flex.row({ style: { gap: '6px', alignItems: 'center' } },
+                            () => isConsoleError.value ? paper.icon('alert', { size: 14, color: '#f43f5e' }) : paper.icon('check', { size: 14, color: '#10b981' }),
+                            paper.span(() => consoleMsg.value)
+                        ),
                         paper.button(".toolbar-btn:Trigger Typo Test", {
                             style: { fontSize: '0.75rem', padding: '2px 6px' },
                             onclick: triggerTypoTest
@@ -337,10 +349,11 @@ return typoEl;`;
                             paper.span(".dot-status", { style: { background: 'var(--rose)', boxShadow: '0 0 8px var(--rose)' } }),
                             paper.span("sandbox-preview.html")
                         ),
-                        paper.button(".toolbar-btn:♻️ Force Reload", {
-                            style: { background: 'rgba(99,102,241,0.1)', borderColor: 'var(--primary)' },
+                        paper.button({
+                            class: 'toolbar-btn',
+                            style: { background: 'rgba(99,102,241,0.1)', borderColor: 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: '6px' },
                             onclick: runSandbox
-                        })
+                        }, paper.icon('refresh', { size: 14 }), "Force Reload")
                     ),
                     
                     paper.div("#sandbox-preview.preview-body", { style: { minHeight: '300px', flex: '1' } }),
@@ -348,7 +361,10 @@ return typoEl;`;
                     
                     // HTML visual node inspector panel
                     paper.div({ style: { background: '#090c15', borderTop: '1px solid var(--border-glow)', padding: '1.5rem', position: 'relative' } },
-                        paper.span(".catalog-meta:🔎 EDUCATIONAL DOM INSPECTOR", { style: { top: '0.75rem', left: '1rem', fontSize: '0.75rem', color: 'var(--teal)' } }),
+                        paper.span(".catalog-meta", { style: { top: '0.75rem', left: '1rem', fontSize: '0.75rem', color: 'var(--teal)', display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                            paper.icon('search', { size: 12, color: 'var(--teal)' }),
+                            "EDUCATIONAL DOM INSPECTOR"
+                        ),
                         paper.pre({ style: { margin: '1rem 0 0 0', maxHeight: '140px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)' } },
                             paper.code("#sandbox-html-inspect", { style: { fontFamily: 'var(--font-mono)', color: '#cbd5e1', fontSize: '0.82rem', whiteSpace: 'pre-wrap' } })
                         )
@@ -370,21 +386,21 @@ return typoEl;`;
         // Initialize Hash Router routes
         paper.route('/', () => {
             return paper.div(
-                paper.h4("🏠 SPA Dashboard View", { style: { color: '#fff', margin: '0 0 10px 0' } }),
+                paper.h4("SPA Dashboard View", { style: { color: '#fff', margin: '0 0 10px 0' } }),
                 paper.p("Welcome to your single-page-app index view! Toggling paths updates the hash parameters natively, causing a reactive swap inside paper.router() automatically.")
             );
         });
 
         paper.route('/docs-route', () => {
             return paper.div(
-                paper.h4("📖 Paper API Documentation View", { style: { color: '#fff', margin: '0 0 10px 0' } }),
+                paper.h4("Paper API Documentation View", { style: { color: '#fff', margin: '0 0 10px 0' } }),
                 paper.p("Browse core functions, plugin systems, computed triggers, or reactive structures completely offline with high performance.")
             );
         });
 
         paper.route('/profile-route', () => {
             return paper.div(
-                paper.h4("👥 User Preferences Settings", { style: { color: '#fff', margin: '0 0 10px 0' } }),
+                paper.h4("User Preferences Settings", { style: { color: '#fff', margin: '0 0 10px 0' } }),
                 paper.p("Manage credentials, dark mode configs, animation timing variables, or inspect session storage states easily.")
             );
         });
@@ -392,25 +408,31 @@ return typoEl;`;
         return paper.div(".container", { style: { paddingTop: '2rem', marginBottom: '5rem' } },
             paper.div(".glass-panel", { style: { padding: '2rem' } },
                 paper.h3(".flex-between", { style: { marginTop: '0', color: '#fff' } },
-                    paper.span("🗺️ Native Tiny Hash SPA Router Demo"),
+                    paper.flex.row({ style: { alignItems: 'center', gap: '8px' } },
+                        paper.icon('palette', { size: 24, color: 'var(--primary)' }),
+                        paper.span("Native Tiny Hash SPA Router Demo")
+                    ),
                     paper.span(".api-badge:Built-in paper.route()", { style: { background: 'rgba(99,102,241,0.15)', borderColor: 'var(--primary)', color: '#a5b4fc' } })
                 ),
                 paper.p({ style: { color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.5rem' } },
                     "Click the routes below to swap view components dynamically without any page loads, listening directly to hash updates inside the built-in router."
                 ),
-                paper.flex.row({ style: { marginBottom: '1.5rem', gap: '8px' } },
-                    paper.button("Home Route ( / )", {
+                paper.flex.row({ style: { marginBottom: '1.5rem', gap: '8px', flexWrap: 'wrap' } },
+                    paper.button({
                         class: () => activeTab.value === 'home' ? 'toolbar-btn active' : 'toolbar-btn',
+                        style: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
                         onclick: () => updateRouterTab('home', '/')
-                    }),
-                    paper.button("Docs Route ( /docs-route )", {
+                    }, paper.icon('home', { size: 14 }), "Home Route"),
+                    paper.button({
                         class: () => activeTab.value === 'docs' ? 'toolbar-btn active' : 'toolbar-btn',
+                        style: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
                         onclick: () => updateRouterTab('docs', '/docs-route')
-                    }),
-                    paper.button("Profile Route ( /profile-route )", {
+                    }, paper.icon('book', { size: 14 }), "Docs Route"),
+                    paper.button({
                         class: () => activeTab.value === 'profile' ? 'toolbar-btn active' : 'toolbar-btn',
+                        style: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
                         onclick: () => updateRouterTab('profile', '/profile-route')
-                    })
+                    }, paper.icon('settings', { size: 14 }), "Profile Route")
                 ),
                 // Dynamic SPA router mounting element
                 paper.div("#router-app-mount", {
@@ -426,7 +448,8 @@ return typoEl;`;
     const ComponentCatalog = () => {
         const CATALOG_ITEMS = {
             'tabs': {
-                title: '📂 Card Tabs System',
+                title: 'Card Tabs System',
+                icon: 'folder',
                 blueprint: `paper.tabs([
     { title: 'Overview', content: "Tab 1: Paper's core is exceptionally light." },
     { title: 'Performance', content: "Tab 2: Speeds clock in 10x faster." },
@@ -441,7 +464,8 @@ return typoEl;`;
                 }
             },
             'autocomplete': {
-                title: '🔍 Smart Autocomplete',
+                title: 'Smart Autocomplete',
+                icon: 'search',
                 blueprint: `paper.autoComplete([
     'United States', 'Canada', 'Mexico', 
     'Brazil', 'United Kingdom', 'Germany'
@@ -459,7 +483,8 @@ return typoEl;`;
                 }
             },
             'modal': {
-                title: '💡 Popup Modals',
+                title: 'Popup Modals',
+                icon: 'alert',
                 blueprint: `let modal = paper.modal(
     paper.div(
         paper.p("Custom inline dialog inside paper!"),
@@ -480,12 +505,12 @@ modal.show();`,
                         onclick: () => {
                             m = paper.modal(
                                 paper.flex.col(
-                                    paper.p("This dialog is generated on the fly inside the DOM. Seamless background masking and click-backdrop dismissal are handled entirely natively!"),
-                                    paper.button("Dismiss Dialog", {
+                                     paper.p("This dialog is generated on the fly inside the DOM. Seamless background masking and click-backdrop dismissal are handled entirely natively!"),
+                                     paper.button("Dismiss Dialog", {
                                         class: 'btn-primary',
                                         style: { width: '100%' },
                                         onclick: () => m.hide()
-                                    })
+                                     })
                                 ),
                                 "Dynamic Modal Box"
                             );
@@ -496,7 +521,8 @@ modal.show();`,
                 }
             },
             'carousel': {
-                title: '🖼️ Responsive Carousel',
+                title: 'Responsive Carousel',
+                icon: 'image',
                 blueprint: `paper.components.carousel([
     'https://picsum.photos/id/10/500/300',
     'https://picsum.photos/id/20/500/300',
@@ -511,27 +537,28 @@ modal.show();`,
                 }
             },
             'toasts': {
-                title: '🔔 Toast Notifications',
+                title: 'Toast Notifications',
+                icon: 'bell',
                 blueprint: `paper.toast("Action completed!", "success");
 paper.toast("Warning log...", "info");
 paper.toast("Network failed", "error");`,
                 creator: () => {
                     return paper.flex.row(
-                        paper.button('Success ✅', {
+                        paper.button({
                             class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#10b981', color: '#10b981' },
+                            style: { flex: '1', borderColor: '#10b981', color: '#10b981', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
                             onclick: () => paper.toast('Operation completed successfully! 🎉', 'success')
-                        }),
-                        paper.button('Info ℹ️', {
+                        }, paper.icon('check', { size: 14, color: '#10b981' }), "Success"),
+                        paper.button({
                             class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#38bdf8', color: '#38bdf8' },
+                            style: { flex: '1', borderColor: '#38bdf8', color: '#38bdf8', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
                             onclick: () => paper.toast('Check your console for build logs.', 'info')
-                        }),
-                        paper.button('Error ⚠️', {
+                        }, paper.icon('info', { size: 14, color: '#38bdf8' }), "Info"),
+                        paper.button({
                             class: 'toolbar-btn',
-                            style: { flex: '1', borderColor: '#f43f5e', color: '#f43f5e' },
+                            style: { flex: '1', borderColor: '#f43f5e', color: '#f43f5e', display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' },
                             onclick: () => paper.toast('Critical compile warning generated.', 'error')
-                        }),
+                        }, paper.icon('alert', { size: 14, color: '#f43f5e' }), "Error"),
                         { style: { width: '100%' } }
                     );
                 }
@@ -552,7 +579,7 @@ paper.toast("Network failed", "error");`,
         const copyBlueprint = () => {
             const text = CATALOG_ITEMS[selectedCatalogKey].blueprint;
             navigator.clipboard.writeText(text).then(() => {
-                paper.toast("Blueprint copied to clipboard! 📋", "success");
+                paper.toast("Blueprint copied to clipboard!", "success");
             });
         };
 
@@ -560,6 +587,7 @@ paper.toast("Network failed", "error");`,
         const listItems = Object.keys(CATALOG_ITEMS).map(k => {
             return {
                 text: CATALOG_ITEMS[k].title,
+                icon: CATALOG_ITEMS[k].icon,
                 active: k === selectedCatalogKey,
                 onclick: () => {
                     document.querySelectorAll('#catalog-sidebar-container .sidebar-item').forEach(el => el.classList.remove('active'));
@@ -584,15 +612,19 @@ paper.toast("Network failed", "error");`,
                 
                 paper.flex.col({ style: { gap: '2rem' } },
                     paper.div(".catalog-preview-area.glass-panel",
-                        paper.span(".catalog-meta:🔴 LIVE COMPONENT INSTANCE"),
+                        paper.span(".catalog-meta", { style: { display: 'inline-flex', alignItems: 'center', gap: '6px' } },
+                            paper.icon('terminal', { size: 12, color: 'var(--teal)' }),
+                            "LIVE COMPONENT INSTANCE"
+                        ),
                         paper.div("#catalog-rendered-component.demo-component-container")
                     ),
                     paper.div(".glass-panel", { style: { padding: '1.5rem', background: '#090c15', position: 'relative' } },
-                        paper.span(".catalog-meta:JAVASCRIPT BLUEPRINT", { style: { top: '1rem', left: '1rem', fontSize: '0.75rem' } }),
-                        paper.button(".toolbar-btn:📋 Copy Code", {
-                            style: { position: 'absolute', right: '1rem', top: '0.8rem', fontSize: '0.8rem', padding: '4px 10px' },
+                        paper.span(".catalog-meta", { style: { top: '1rem', left: '1rem', fontSize: '0.75rem' } }),
+                        paper.button({
+                            class: 'toolbar-btn',
+                            style: { position: 'absolute', right: '1rem', top: '0.8rem', fontSize: '0.8rem', padding: '4px 10px', display: 'inline-flex', alignItems: 'center', gap: '6px' },
                             onclick: copyBlueprint
-                        }),
+                        }, paper.icon('copy', { size: 14 }), "Copy Code"),
                         paper.pre({ style: { margin: '2rem 0 0 0', overflowX: 'auto' } },
                             paper.code("#catalog-code-view", { style: { fontFamily: 'var(--font-mono)', color: '#a5b4fc', fontSize: '0.9rem' } })
                         )
@@ -694,7 +726,10 @@ paper.toast("Network failed", "error");`,
         });
 
         return paper.div(".container", { style: { paddingTop: '6rem' } },
-            paper.h2(".section-title:🔌 Full Live API Integrations"),
+            paper.h2(".section-title", { style: { display: 'inline-flex', alignItems: 'center', gap: '8px' } },
+                paper.icon('bolt', { size: 24, color: 'var(--teal)' }),
+                "Full Live API Integrations"
+            ),
             paper.p({ style: { color: 'var(--text-muted)', marginTop: '-1.5rem', marginBottom: '3rem', maxWidth: '600px' } },
                 "Standard components natively loaded using `paper.fetch` to query high-uptime developer endpoints. Everything executes with full loading states, micro-transitions, and custom error boundaries."
             ),
@@ -733,7 +768,7 @@ paper.toast("Network failed", "error");`,
                 sub: "Zero bundle config. Simply load paper-complete.js and start writing.",
                 code: `<!-- 1. Include CSS Variables & Library Complete -->
 <link rel="stylesheet" href="styles.css">
-<script src="paper-complete.js"></script>
+<script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
 
 <!-- 2. Mount root element -->
 <div id="app"></div>
@@ -747,7 +782,7 @@ paper.toast("Network failed", "error");`,
             bootstrap: {
                 title: "Bootstrap Integration Setup Guide",
                 sub: "Run Bootstrap elements instantly with zero styling links setups in index.html.",
-                code: `<script src="paper-complete.js"></script>
+                code: `<script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
 
 <div id="app"></div>
 
@@ -769,7 +804,7 @@ paper.toast("Network failed", "error");`,
             tailwind: {
                 title: "Tailwind CSS Integration Guide",
                 sub: "Utilize fully responsive Tailwind classes instantly at absolute zero config.",
-                code: `<script src="paper-complete.js"></script>
+                code: `<script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
 
 <div id="app"></div>
 
@@ -801,28 +836,31 @@ paper.toast("Network failed", "error");`,
 
         return paper.div(".container", { style: { paddingTop: '4rem' } },
             paper.div(".glass-panel", { style: { padding: '3rem', background: 'linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(13,17,34,0.4) 100%)' } },
-                paper.h2(".section-title", { style: { marginTop: '0' } }, "🚀 Instant Framework Integrations"),
+                paper.h2(".section-title", { style: { marginTop: '0', display: 'inline-flex', alignItems: 'center', gap: '8px' } }, 
+                    paper.icon('star', { size: 24, color: 'var(--amber)' }), 
+                    "Instant Framework Integrations"
+                ),
                 paper.p({ style: { color: 'var(--text-muted)', marginBottom: '2rem', maxWidth: '700px' } },
                     "Link Paper.js and begin building instantly! Choose your preferred styling stack below to view copy-pasteable startup guides. Paper handles CDNs and DOM parsing dynamically."
                 ),
                 
-                paper.div(".studio-grid", { style: { gridTemplateColumns: '0.8fr 1.2fr', gap: '2rem' } },
+                paper.div(".guides-grid",
                     paper.flex.col({ style: { justifyContent: 'center', gap: '12px' } },
-                        paper.button("Vanilla CSS 🎨", {
+                        paper.button({
                             class: () => selectedTab.value === 'vanilla' ? 'gradient-btn' : 'toolbar-btn',
-                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px' },
+                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px', display: 'inline-flex', alignItems: 'center', gap: '8px' },
                             onclick: () => renderGuideCode('vanilla')
-                        }),
-                        paper.button("Bootstrap 🌟", {
+                        }, paper.icon('palette', { size: 16 }), "Vanilla CSS Setup"),
+                        paper.button({
                             class: () => selectedTab.value === 'bootstrap' ? 'gradient-btn' : 'toolbar-btn',
-                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px' },
+                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px', display: 'inline-flex', alignItems: 'center', gap: '8px' },
                             onclick: () => renderGuideCode('bootstrap')
-                        }),
-                        paper.button("Tailwind CSS ⚡", {
+                        }, paper.icon('star', { size: 16 }), "Bootstrap Framework"),
+                        paper.button({
                             class: () => selectedTab.value === 'tailwind' ? 'gradient-btn' : 'toolbar-btn',
-                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px' },
+                            style: { width: '100%', justifyContent: 'flex-start', padding: '12px 20px', display: 'inline-flex', alignItems: 'center', gap: '8px' },
                             onclick: () => renderGuideCode('tailwind')
-                        })
+                        }, paper.icon('bolt', { size: 16 }), "Tailwind CSS Stack")
                     ),
                     
                     paper.div({ style: { background: 'rgba(9, 12, 23, 0.6)', padding: '1.5rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-glow)' } },
@@ -885,10 +923,18 @@ paper.toast("Network failed", "error");`,
         return paper.footer(".main-footer",
             paper.div(".container",
                 paper.div(".social-links",
-                    paper.a("📄 GitHub", { href: '#' }),
-                    paper.a("📖 Documentation", { href: '#' }),
-                    paper.a("⚙️ Plugin Registry", { href: '#' }),
-                    paper.a("📦 CDN Package", { href: '#' })
+                    paper.a({ href: 'https://github.com/EldrexDelosReyesBula/Paper.js/', target: '_blank', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
+                        paper.icon('github', { size: 16 }), "GitHub Repository"
+                    ),
+                    paper.a({ href: '#docs', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
+                        paper.icon('book', { size: 16 }), "Documentation"
+                    ),
+                    paper.a({ href: '#playground', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
+                        paper.icon('settings', { size: 16 }), "Plugin Registry"
+                    ),
+                    paper.a({ href: 'https://eldrex-paper-js.vercel.app/paper-complete.js', target: '_blank', style: { display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' } },
+                        paper.icon('package', { size: 16 }), "CDN Package"
+                    )
                 ),
                 paper.p("Paper and official plugins are open-source and released under the MIT License."),
                 paper.p("Crafted with absolute zero dependencies. Built entirely with Paper.js.", { style: { fontSize: '0.75rem', marginTop: '10px', color: 'var(--text-muted)' } })

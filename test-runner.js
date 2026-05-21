@@ -63,6 +63,9 @@ global.document = {
             }
         };
     },
+    createElementNS(ns, tag) {
+        return this.createElement(tag);
+    },
     createDocumentFragment() {
         return {
             appendChild(child) {

@@ -247,6 +247,13 @@ interface PaperStatic {
      * Useful for zero-config starting of modern styling templates.
      */
     loadFramework(framework: 'tailwind' | 'bootstrap'): void;
+
+    /**
+     * Generates a modern inline vector SVG element for the preloaded system icons.
+     * @param name Preloaded icon keyword key
+     * @param options Custom configurations like size, color, strokeWidth, class, or style
+     */
+    icon(name: string, options?: { size?: number; color?: string; strokeWidth?: number; class?: string; style?: Record<string, string> }): SVGElement;
 }
 
 declare global {
