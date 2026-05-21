@@ -174,7 +174,7 @@ return app;`
                     paper.span("Launch Sandbox Studio"),
                     paper.span("→", { style: { fontSize: '1.15rem' } })
                 ),
-                paper.a("Visual Components Catalog", { href: '#docs', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', align-items: 'center' } })
+                paper.a("Visual Components Catalog", { href: '#docs', class: 'toolbar-btn', style: { padding: '12px 24px', borderRadius: 'var(--radius-md)', textDecoration: 'none', display: 'inline-flex', 'align-items': 'center' } })
             ),
             paper.div(".hero-stats",
                 paper.div(".stat-item",

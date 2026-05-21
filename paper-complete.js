@@ -9,7 +9,8 @@ window.paper = (function() {
     // Levenshtein Spellcheck tag suggestions list
     const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
                       'input','textarea','select','option','ul','ol','li','table','thead','tbody','tr','td',
-                      'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br'];
+                      'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br',
+                      'strong','em','canvas','iframe'];
 
     /**
      * Parses standard JS class arrays and objects into a space-separated string.
@@ -70,7 +71,6 @@ window.paper = (function() {
     function paper(tag, ...args) {
         checkTag(tag);
         let el = document.createElement(tag);
-        let content = '';
 
         let appendChild = (child) => {
             if (child === null || child === undefined) return;
@@ -102,6 +102,7 @@ window.paper = (function() {
                 child.forEach(appendChild);
             }
             else if (typeof child === 'function') {
+                // Computed state binding
                 let node = document.createTextNode('');
                 el.appendChild(node);
                 paper.computed(() => {
@@ -110,30 +111,54 @@ window.paper = (function() {
                 });
             }
             else {
+                // Standard string parsing
                 let str = String(child);
+                let hasColon = str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://');
+                
                 if (str.startsWith('.')) {
-                    el.className = (el.className ? el.className + ' ' : '') + str.slice(1).split('.').join(' ');
+                    if (hasColon) {
+                        let colonIdx = str.indexOf(':');
+                        let selector = str.substring(0, colonIdx);
+                        let text = str.substring(colonIdx + 1);
+                        el.className = (el.className ? el.className + ' ' : '') + selector.slice(1).split('.').join(' ');
+                        el.appendChild(document.createTextNode(text));
+                    } else {
+                        el.className = (el.className ? el.className + ' ' : '') + str.slice(1).split('.').join(' ');
+                    }
                 }
                 else if (str.startsWith('#')) {
-                    el.id = str.slice(1);
+                    if (hasColon) {
+                        let colonIdx = str.indexOf(':');
+                        let selector = str.substring(0, colonIdx);
+                        let text = str.substring(colonIdx + 1);
+                        el.id = selector.slice(1);
+                        el.appendChild(document.createTextNode(text));
+                    } else {
+                        el.id = str.slice(1);
+                    }
                 }
-                else if (str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://')) {
+                else if (hasColon) {
                     let colonIdx = str.indexOf(':');
                     let t = str.substring(0, colonIdx);
                     let [_, ...rest] = str.split(':');
                     let c = rest.join(':');
-                    let childEl = document.createElement(t);
-                    childEl.textContent = c;
-                    el.appendChild(childEl);
+                    if (tagList.includes(t.toLowerCase())) {
+                        let childEl = document.createElement(t);
+                        childEl.textContent = c;
+                        el.appendChild(childEl);
+                    } else {
+                        el.appendChild(document.createTextNode(str));
+                    }
                 }
                 else {
-                    content += str;
+                    el.appendChild(document.createTextNode(str));
                 }
             }
         };
 
         args.forEach(arg => {
             if (typeof arg === 'object' && !(arg instanceof HTMLElement) && !(arg instanceof DocumentFragment) && !Array.isArray(arg) && typeof arg.subscribe !== 'function') {
+                // Setup attributes mapping
                 if (arg.style) Object.assign(el.style, arg.style);
                 if (arg.data) Object.assign(el.dataset, arg.data);
                 if (arg.attrs) Object.assign(el, arg.attrs);
@@ -160,7 +185,6 @@ window.paper = (function() {
             }
         });
 
-        if (content) el.textContent = content;
         return el;
     }
 

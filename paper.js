@@ -12,7 +12,8 @@
     // Levenshtein Spellcheck tag suggestions list
     const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
                       'input','textarea','select','option','ul','ol','li','table','thead','tbody','tr','td',
-                      'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br'];
+                      'th','form','label','section','article','header','footer','nav','aside','main','pre','code','hr','br',
+                      'strong','em','canvas','iframe'];
 
     /**
      * Parse classes from arrays or dictionaries into a clean space-separated classname list.
@@ -73,7 +74,6 @@
     function paper(tag, ...args) {
         checkTag(tag);
         let el = document.createElement(tag);
-        let content = '';
 
         let appendChild = (child) => {
             if (child === null || child === undefined) return;
@@ -116,23 +116,45 @@
             else {
                 // Standard string parsing
                 let str = String(child);
+                let hasColon = str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://');
+                
                 if (str.startsWith('.')) {
-                    el.className = (el.className ? el.className + ' ' : '') + str.slice(1).split('.').join(' ');
+                    if (hasColon) {
+                        let colonIdx = str.indexOf(':');
+                        let selector = str.substring(0, colonIdx);
+                        let text = str.substring(colonIdx + 1);
+                        el.className = (el.className ? el.className + ' ' : '') + selector.slice(1).split('.').join(' ');
+                        el.appendChild(document.createTextNode(text));
+                    } else {
+                        el.className = (el.className ? el.className + ' ' : '') + str.slice(1).split('.').join(' ');
+                    }
                 }
                 else if (str.startsWith('#')) {
-                    el.id = str.slice(1);
+                    if (hasColon) {
+                        let colonIdx = str.indexOf(':');
+                        let selector = str.substring(0, colonIdx);
+                        let text = str.substring(colonIdx + 1);
+                        el.id = selector.slice(1);
+                        el.appendChild(document.createTextNode(text));
+                    } else {
+                        el.id = str.slice(1);
+                    }
                 }
-                else if (str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://')) {
+                else if (hasColon) {
                     let colonIdx = str.indexOf(':');
                     let t = str.substring(0, colonIdx);
                     let [_, ...rest] = str.split(':');
                     let c = rest.join(':');
-                    let childEl = document.createElement(t);
-                    childEl.textContent = c; // textContent instead of innerHTML for XSS protection
-                    el.appendChild(childEl);
+                    if (tagList.includes(t.toLowerCase())) {
+                        let childEl = document.createElement(t);
+                        childEl.textContent = c;
+                        el.appendChild(childEl);
+                    } else {
+                        el.appendChild(document.createTextNode(str));
+                    }
                 }
                 else {
-                    content += str;
+                    el.appendChild(document.createTextNode(str));
                 }
             }
         };
@@ -166,7 +188,6 @@
             }
         });
 
-        if (content) el.textContent = content; // XSS protection
         return el;
     }
 
