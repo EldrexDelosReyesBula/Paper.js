@@ -222,7 +222,12 @@ return app;`
 
         // Render compilation sandbox logic
         const runSandbox = () => {
-            const code = document.getElementById('sandbox-editor').value;
+            const editor = document.getElementById('sandbox-editor');
+            if (!editor) {
+                setTimeout(runSandbox, 50);
+                return;
+            }
+            const code = editor.value;
             const preview = document.getElementById('sandbox-preview');
             const errorBox = document.getElementById('sandbox-error');
             const htmlInspect = document.getElementById('sandbox-html-inspect');
@@ -1436,7 +1441,7 @@ User.watch(users => console.log("DB Updated:", users));`,
                 paper.div(".catalog-preview-area.glass-panel", { style: { padding: '1.5rem', display: 'flex', flexDirection: 'column' } },
                     paper.flex.between(
                         paper.div(
-                            paper.span(() => `Safe Cache: ${store.items.value.length} Developers`, { 
+                            paper.span(() => `Safe Cache: ${store.state.value.length} Developers`, { 
                                 style: { 
                                     fontWeight: 'bold', color: '#fff', fontSize: '1rem',
                                     display: 'inline-flex', alignItems: 'center', gap: '6px'

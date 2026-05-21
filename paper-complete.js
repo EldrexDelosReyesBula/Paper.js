@@ -1632,14 +1632,7 @@ paper.auth = {
  * Zero-dependency hardware-accelerated animation engine.
  */
 (function() {
-    // Inject animate.css dynamically if not present
-    if (typeof document !== 'undefined' && !document.getElementById('paper-animate-styles')) {
-        let link = document.createElement('link');
-        link.id = 'paper-animate-styles';
-        link.rel = 'stylesheet';
-        link.href = 'animate.css'; // Expects animate.css to be in the same folder or bundled
-        document.head.appendChild(link);
-    }
+    // Styles are bundled natively via build.js into paper-complete-styles
 
     const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
@@ -2177,6 +2170,62 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
     #editor-pane, #preview-pane { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
     .catalog-sidebar { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border-color); }
     .playground-body { flex-direction: column !important; }
+}
+\\n
+/* Docs Layout */
+.docs-container {
+    display: flex;
+    min-height: 100vh;
+}
+.sidebar {
+    width: 250px;
+    background: #0a0f1c;
+    border-right: 1px solid var(--border-color);
+    padding: 2rem 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+.sidebar-link {
+    display: block;
+    padding: 0.5rem 1.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+.sidebar-link:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.05);
+}
+.sidebar-link.active {
+    color: var(--primary);
+    background: rgba(99, 102, 241, 0.1);
+    border-right: 3px solid var(--primary);
+}
+.docs-content {
+    flex-grow: 1;
+    padding: 3rem 4rem;
+    max-width: 900px;
+}
+
+@media (max-width: 768px) {
+    .docs-container {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding: 1rem 0;
+    }
+    .docs-content {
+        padding: 2rem 1.5rem;
+    }
 }
 `;
         document.head.appendChild(style);

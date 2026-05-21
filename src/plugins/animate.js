@@ -3,14 +3,7 @@
  * Zero-dependency hardware-accelerated animation engine.
  */
 (function() {
-    // Inject animate.css dynamically if not present
-    if (typeof document !== 'undefined' && !document.getElementById('paper-animate-styles')) {
-        let link = document.createElement('link');
-        link.id = 'paper-animate-styles';
-        link.rel = 'stylesheet';
-        link.href = 'animate.css'; // Expects animate.css to be in the same folder or bundled
-        document.head.appendChild(link);
-    }
+    // Styles are bundled natively via build.js into paper-complete-styles
 
     const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
