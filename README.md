@@ -1,3 +1,6 @@
+<img width="2100" height="1103" alt="Paper.js banner" src="https://github.com/user-attachments/assets/712b968d-4f1e-4a59-946e-c70cca126c0a" />
+
+
 # 📄 Paper.js - The Dead-Simple HTML Library
 > **Write HTML like you're writing a text message.**
 
