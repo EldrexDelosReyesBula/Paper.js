@@ -6,7 +6,6 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-teal.svg)](#license)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-indigo.svg)](#core-philosophy)
 [![Bundle Size](https://img.shields.io/badge/Minified--Gzipped-~12KB-blue.svg)](#performance-benchmarks)
-[![npm version](https://img.shields.io/npm/v/papyr.js.svg)](https://www.npmjs.com/package/papyr.js)
 
 Papyrus is an ultra-lightweight, blazing-fast JavaScript library designed to build modern interactive HTML interfaces with absolute zero complexity and zero terminal setups. By bypassing the Virtual DOM, Papyrus delivers direct DOM manipulation with reactive state tracking, enterprise-grade security, and a delightfully simple API.
 
