@@ -699,7 +699,7 @@ npm run dev
 
 ### Reporting Issues
 - Use GitHub Issues for bugs
-- Provide minimal reproducible example
+- Provide a minimal reproducible example
 - Include browser and OS information
 - Share error logs and stack traces
 
@@ -791,11 +791,9 @@ python paper.py build
 
 ## 🎓 Learning Resources
 
-- **Official Documentation:** https://papyrus-js.vercel.app/docs
-- **Interactive Playground:** https://papyrus-js.vercel.app/playground
+- **Official Documentation:** https://papyrus-js.vercel.app/docs.html
+- **Official Site:** https://papyrus-js.vercel.app/
 - **Example Projects:** https://github.com/EldrexDelosReyesBula/Papyr.js/tree/main/examples
-- **Community Chat:** [Discord Server](#)
-- **Video Tutorials:** [YouTube Playlist](#)
 
 ---
 
@@ -803,32 +801,10 @@ python paper.py build
 
 - **GitHub Issues:** [Report bugs](https://github.com/EldrexDelosReyesBula/Papyr.js/issues)
 - **Discussions:** [Ask questions](https://github.com/EldrexDelosReyesBula/Papyr.js/discussions)
-- **Email:** contact@papyrus-js.dev
-- **Twitter:** [@PapyrusJS](https://twitter.com/PapyrusJS)
+- **Email:** eldrexdelosreyesbula@gmail.com
 
 ---
 
-## 📜 Changelog
-
-### v3.0 (Current)
-- ✨ Agile Modular Architecture
-- 🔐 Enterprise Security Vault
-- 🧮 Reactive Math Engine
-- 🎬 Physics & Animation Engine
-- 🤖 AI/ML Toolkit
-- 📱 Mobile Responsiveness Enhancements
-
-### v2.5
-- State management improvements
-- Performance optimizations
-- Bug fixes
-
-### v2.0
-- Initial public release
-- Core reactivity system
-- Basic UI components
-
----
 
 ## 📄 License
 
@@ -870,6 +846,6 @@ in the Software without restriction...
 
 ---
 
-*Papyrus v3.0 — Built with zero dependencies. Crafted with passion for simplicity.*
+*Papyrus v2.0 — Built with zero dependencies. Crafted with passion for simplicity.*
 
 **Start building beautiful apps today:** https://papyrus-js.vercel.app/
