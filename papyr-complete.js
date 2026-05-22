@@ -1,6 +1,5 @@
 /**
  * PAPER STATIC SITE LIBRARY - Complete Showcase Bundle
- * v3.0 - Core Reactivity, SPA Routing, Reactive Math Logic, Persistent Local CRUD Database, Responsive Widgets
  * Released under MIT License.
  */
 
