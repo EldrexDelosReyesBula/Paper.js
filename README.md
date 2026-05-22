@@ -34,7 +34,7 @@ Papyrus is an ultra-lightweight, blazing-fast JavaScript library designed to bui
 
 1. **One Function. One Rule. Zero Complexity:** If you know standard HTML tags and JavaScript objects, you already know Papyrus.
 2. **XSS-Immune Secure Engine:** Transparently sanitizes strings, removing dangerous script vectors and pseudo-protocols dynamically.
-3. **No NPM or Terminal Overhead Required:** Just include a single CDN link inside a bare HTML file and hit refresh.
+3. **No NPM or Terminal Overhead Required:** include a single CDN link inside a bare HTML file and hit refresh.
 4. **CSS Spotlight Design System:** Loaded with premium dark grids, radial glows, glassmorphism panel states, and fluid scroll animations out of the box.
 5. **Enterprise-Ready Reactivity:** Fine-grained dependency tracking with zero virtual DOM overhead—direct DOM updates.
 
@@ -64,15 +64,6 @@ Papyrus is an ultra-lightweight, blazing-fast JavaScript library designed to bui
 ### CDN (Fastest Setup)
 ```html
 <script src="https://papyrus-js.vercel.app/papyr-complete.js"></script>
-```
-
-### npm
-```bash
-npm install papyr.js
-```
-
-```javascript
-import papyr from 'papyr.js';
 ```
 
 ### Modular CDN (Load Only What You Need)
