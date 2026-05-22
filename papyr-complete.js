@@ -13,14 +13,16 @@
  * PAPYR CORE DOM ENGINE
  * 
  * Compiles standard JS parameter lists, selectors, and states to native, styled HTML elements.
+ * Transitioned to a Modular Intelligent Web Runtime Kernel architecture.
  */
 
-const tagList = ['div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
+const tagList = ['html','head','body','title','div','span','p','h1','h2','h3','h4','h5','h6','button','a','img',
                   'input','textarea','select','option','optgroup','ul','ol','li','dl','dt','dd',
                   'table','thead','tbody','tfoot','tr','td','th','caption','colgroup','col',
                   'form','label','fieldset','legend','datalist','output',
                   'section','article','header','footer','nav','aside','main',
                   'pre','code','hr','br','strong','em','small','mark','sub','sup','i','b','u','s',
+                  'tt','cite','address','blockquote',
                   'audio','video','source','track','picture','embed','iframe','canvas','svg',
                   'details','summary','dialog','menu','menuitem','template','slot'];
 
@@ -56,385 +58,603 @@ function levenshtein(a, b) {
     return tmp[a.length][b.length];
 }
 
-/**
- * Runs runtime spelling validations on tag creators.
- * @private
- */
-function checkTag(tag) {
-    if (!isDebug || tagList.includes(tag)) return;
-    let min = Infinity, match = '';
-    tagList.forEach(t => {
-        let d = levenshtein(tag, t);
-        if (d < min) { min = d; match = t; }
-    });
-    console.warn(`PapyrWarning: Unknown tag "${tag}".${min < 3 ? ` Did you mean "${match}"?` : ''}`);
-    
-    let warningEvent = new CustomEvent('papyr-warning', { detail: { tag, suggestion: min < 3 ? match : '' } });
-    window.dispatchEvent(warningEvent);
+const coreInitializers = [];
+
+// 1. EventBus Subsystem
+class EventBus {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.listeners = {};
+    }
+    on(event, callback) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+    }
+    off(event, callback) {
+        if (!this.listeners[event]) return;
+        this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+    }
+    emit(event, data) {
+        if (this.listeners[event]) {
+            this.listeners[event].forEach(cb => {
+                try { cb(data); } catch(e) { this.kernel.diagnostics.reportError(e); }
+            });
+        }
+    }
+}
+
+// 2. StateManager Subsystem
+class StateManager {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.states = new Set();
+    }
+    register(stateObj) {
+        this.states.add(stateObj);
+    }
+    list() {
+        return Array.from(this.states);
+    }
+    dump() {
+        const result = {};
+        let idx = 0;
+        this.states.forEach(s => {
+            result[`state_${idx++}`] = s.value;
+        });
+        return result;
+    }
+}
+
+// 3. ComponentRegistry Subsystem
+class ComponentRegistry {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.registered = new Set();
+    }
+    register(el) {
+        this.registered.add(el);
+    }
+    list() {
+        return Array.from(this.registered).filter(el => {
+            if (typeof document !== 'undefined') {
+                if (typeof document.contains === 'function') {
+                    return document.contains(el);
+                }
+                if (document.body && typeof document.body.contains === 'function') {
+                    return document.body.contains(el);
+                }
+            }
+            return true;
+        }).map(el => {
+            return {
+                tag: el.tagName ? el.tagName.toLowerCase() : 'unknown',
+                id: el.id || '',
+                classes: el.className || ''
+            };
+        });
+    }
+}
+
+// 4. PluginSystem Subsystem
+class PluginSystem {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.installed = new Map();
+    }
+    register(plugin) {
+        if (!plugin || typeof plugin !== 'object') return;
+        this.installed.set(plugin.name, plugin);
+        if (typeof plugin.install === 'function') {
+            plugin.install(this.kernel);
+        }
+        if (plugin.hooks && typeof plugin.hooks.onInit === 'function') {
+            plugin.hooks.onInit();
+        }
+    }
+    resolve(name) {
+        return this.installed.get(name);
+    }
+    list() {
+        return Array.from(this.installed.keys()).map(name => {
+            const p = this.installed.get(name);
+            return { name: p.name, version: p.version || '1.0.0' };
+        });
+    }
+    triggerHook(hookName, ...args) {
+        this.installed.forEach(plugin => {
+            if (plugin.hooks && typeof plugin.hooks[hookName] === 'function') {
+                try {
+                    plugin.hooks[hookName](...args);
+                } catch(e) {
+                    this.kernel.diagnostics.reportError(e);
+                }
+            }
+        });
+    }
+}
+
+// 5. RuntimeContext Subsystem
+class RuntimeContext {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.routes = [];
+        this.intent = null;
+    }
+}
+
+// 6. DiagnosticsEngine Subsystem
+class DiagnosticsEngine {
+    constructor(kernel) {
+        this.kernel = kernel;
+        this.errors = [];
+        this.listeners = {};
+        this.updateCounts = new Map();
+    }
+    on(event, callback) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+    }
+    emit(event, data) {
+        if (this.listeners[event]) {
+            this.listeners[event].forEach(cb => cb(data));
+        }
+    }
+    reportError(err) {
+        const errorObj = {
+            type: 'error',
+            message: err.message || String(err),
+            timestamp: new Date().toISOString(),
+            stack: err.stack || ''
+        };
+        this.errors.push(errorObj);
+        this.kernel.events.emit('error', errorObj);
+    }
+    trackUpdate(stateObj, newVal, oldVal) {
+        let count = (this.updateCounts.get(stateObj) || 0) + 1;
+        this.updateCounts.set(stateObj, count);
+        if (count > 100) {
+            this.emit('performance', {
+                type: 'High Re-renders',
+                message: `State variable updated ${count} times, potential infinite re-render loop detected!`,
+                state: stateObj,
+                count: count
+            });
+        }
+    }
 }
 
 /**
- * Creates a native HTML Element wrapped in Papyr selectors, styles, attributes, and events.
- * 
- * @param {string} tag Native HTML element tag (e.g. 'div', 'span', 'button')
- * @param {...*} args Class lists, IDs, event listeners, states, attributes, or children elements
- * @returns {HTMLElement} Native HTML Element
+ * Creates a Papyr Runtime Kernel Instance
+ * @returns {PapyrKernel} callable element creator function with subsystems attached
  */
-function papyr(tag, ...args) {
-    checkTag(tag);
-    let el;
-    if (tag && tag.toLowerCase() === 'script') {
-        el = document.createElement(tag);
-        const originalSetAttribute = el.setAttribute;
-        el.setAttribute = function(k, v) {
-            if (k && k.toLowerCase() === 'src' && papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
-                console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
-                return;
+function createPapyr() {
+    // 1. Functional DOM creator
+    function papyrInstance(tag, ...args) {
+        // Spelling/tag validation checks
+        if (isDebug && !tagList.includes(tag)) {
+            let min = Infinity, match = '';
+            tagList.forEach(t => {
+                let d = levenshtein(tag, t);
+                if (d < min) { min = d; match = t; }
+            });
+            const warnMsg = `Unknown tag "${tag}".${min < 3 ? ` Did you mean "${match}"?` : ''}`;
+            console.warn(`PapyrWarning: ${warnMsg}`);
+            
+            papyrInstance.diagnostics.errors.push({
+                type: 'warning',
+                message: warnMsg,
+                timestamp: new Date().toISOString()
+            });
+
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('papyr-warning', { 
+                    detail: { tag, suggestion: min < 3 ? match : '' } 
+                }));
             }
-            originalSetAttribute.apply(this, arguments);
-        };
-        Object.defineProperty(el, 'src', {
-            set(v) {
-                if (papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
+        }
+
+        let el;
+        if (tag && tag.toLowerCase() === 'script') {
+            el = document.createElement(tag);
+            const originalSetAttribute = el.setAttribute;
+            el.setAttribute = function(k, v) {
+                if (k && k.toLowerCase() === 'src' && papyrInstance.security && typeof papyrInstance.security.shouldBlockScript === 'function' && papyrInstance.security.shouldBlockScript(v)) {
                     console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
                     return;
                 }
-                originalSetAttribute.call(el, 'src', v);
-            },
-            get() { return el.getAttribute('src'); },
-            configurable: true
-        });
-    } else {
-        el = document.createElement(tag);
-    }
+                originalSetAttribute.apply(this, arguments);
+            };
+            Object.defineProperty(el, 'src', {
+                set(v) {
+                    if (papyrInstance.security && typeof papyrInstance.security.shouldBlockScript === 'function' && papyrInstance.security.shouldBlockScript(v)) {
+                        console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                        return;
+                    }
+                    originalSetAttribute.call(el, 'src', v);
+                },
+                get() { return el.getAttribute('src'); },
+                configurable: true
+            });
+        } else {
+            el = document.createElement(tag);
+        }
 
-    let appendChild = (child) => {
-        if (child === null || child === undefined) return;
-        
-        // Reactive State Object (has a subscribe method)
-        if (typeof child === 'object' && typeof child.subscribe === 'function') {
-            let node = document.createTextNode('');
-            el.appendChild(node);
-            child.subscribe(v => {
-                if (v instanceof Element || v instanceof DocumentFragment) {
-                    let parent = node.parentNode;
-                    if (parent) {
-                        let next = node.nextSibling;
-                        if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
-                            parent.replaceChild(v, next);
-                        } else {
-                            parent.insertBefore(v, next);
-                        }
-                    }
-                } else {
-                    node.textContent = String(v);
-                }
-            });
-        }
-        else if (child instanceof Element || child instanceof DocumentFragment) {
-            el.appendChild(child);
-        }
-        else if (Array.isArray(child)) {
-            child.forEach(appendChild);
-        }
-        else if (typeof child === 'function') {
-            // Computed state binding
-            let node = document.createTextNode('');
-            el.appendChild(node);
-            papyr.computed(() => {
-                let v = child();
-                if (v instanceof Element || v instanceof DocumentFragment) {
-                    let parent = node.parentNode;
-                    if (parent) {
-                        let next = node.nextSibling;
-                        if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
-                            parent.replaceChild(v, next);
-                        } else {
-                            parent.insertBefore(v, next);
-                        }
-                    }
-                } else {
-                    node.textContent = String(v);
-                }
-            });
-        }
-        else {
-            // Standard string parsing
-            let str = String(child);
-            let hasColon = str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://');
+        // Register in ComponentRegistry
+        papyrInstance.components.register(el);
+
+        let appendChild = (child) => {
+            if (child === null || child === undefined) return;
             
-            if (str.startsWith('.') || str.startsWith('#')) {
-                let selector = str;
-                let text = '';
-                if (hasColon) {
-                    let colonIdx = str.indexOf(':');
-                    selector = str.substring(0, colonIdx);
-                    text = str.substring(colonIdx + 1);
-                }
-                
-                let parts = selector.match(/[.#][^.#]+/g);
-                if (parts) {
-                    parts.forEach(part => {
-                        if (part.startsWith('#')) {
-                            el.id = part.slice(1);
-                        } else if (part.startsWith('.')) {
-                            el.classList.add(part.slice(1));
+            if (typeof child === 'object' && typeof child.subscribe === 'function') {
+                let node = document.createTextNode('');
+                el.appendChild(node);
+                child.subscribe(v => {
+                    if (v instanceof Element || v instanceof DocumentFragment) {
+                        let parent = node.parentNode;
+                        if (parent) {
+                            let next = node.nextSibling;
+                            if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
+                                parent.replaceChild(v, next);
+                            } else {
+                                parent.insertBefore(v, next);
+                            }
                         }
-                    });
-                }
-                
-                if (hasColon) {
-                    el.appendChild(document.createTextNode(text));
-                }
+                    } else {
+                        node.textContent = String(v);
+                    }
+                });
             }
-            else if (hasColon) {
-                let colonIdx = str.indexOf(':');
-                let t = str.substring(0, colonIdx);
-                let [_, ...rest] = str.split(':');
-                let c = rest.join(':');
-                if (tagList.includes(t.toLowerCase())) {
-                    let childEl = document.createElement(t);
-                    childEl.textContent = c;
-                    el.appendChild(childEl);
-                } else {
+            else if (child instanceof Element || child instanceof DocumentFragment) {
+                el.appendChild(child);
+            }
+            else if (Array.isArray(child)) {
+                child.forEach(appendChild);
+            }
+            else if (typeof child === 'function') {
+                let node = document.createTextNode('');
+                el.appendChild(node);
+                papyrInstance.computed(() => {
+                    let v = child();
+                    if (v instanceof Element || v instanceof DocumentFragment) {
+                        let parent = node.parentNode;
+                        if (parent) {
+                            let next = node.nextSibling;
+                            if (next && next !== node && !(next instanceof Text && next.textContent === '')) {
+                                parent.replaceChild(v, next);
+                            } else {
+                                parent.insertBefore(v, next);
+                            }
+                        }
+                    } else {
+                        node.textContent = String(v);
+                    }
+                });
+            }
+            else {
+                let str = String(child);
+                let hasColon = str.includes(':') && !str.startsWith('http://') && !str.startsWith('https://');
+                
+                if (str.startsWith('.') || str.startsWith('#')) {
+                    let selector = str;
+                    let text = '';
+                    if (hasColon) {
+                        let colonIdx = str.indexOf(':');
+                        selector = str.substring(0, colonIdx);
+                        text = str.substring(colonIdx + 1);
+                    }
+                    
+                    let parts = selector.match(/[.#][^.#]+/g);
+                    if (parts) {
+                        parts.forEach(part => {
+                            if (part.startsWith('#')) {
+                                el.id = part.slice(1);
+                            } else if (part.startsWith('.')) {
+                                el.classList.add(part.slice(1));
+                            }
+                        });
+                    }
+                    
+                    if (hasColon) {
+                        el.appendChild(document.createTextNode(text));
+                    }
+                }
+                else if (hasColon) {
+                    let colonIdx = str.indexOf(':');
+                    let t = str.substring(0, colonIdx);
+                    let [_, ...rest] = str.split(':');
+                    let c = rest.join(':');
+                    if (tagList.includes(t.toLowerCase())) {
+                        let childEl = document.createElement(t);
+                        childEl.textContent = c;
+                        el.appendChild(childEl);
+                    } else {
+                        el.appendChild(document.createTextNode(str));
+                    }
+                }
+                else {
                     el.appendChild(document.createTextNode(str));
                 }
             }
-            else {
-                el.appendChild(document.createTextNode(str));
-            }
-        }
-    };
+        };
 
-    args.forEach(arg => {
-        if (arg !== null && typeof arg === 'object' && !(arg instanceof Element) && !(arg instanceof DocumentFragment) && !Array.isArray(arg) && typeof arg.subscribe !== 'function') {
-            // Setup attributes mapping
-            if (arg.style) Object.assign(el.style, arg.style);
-            if (arg.data) Object.assign(el.dataset, arg.data);
-            if (arg.attrs) Object.assign(el, arg.attrs);
-            
-            Object.entries(arg).forEach(([k, v]) => {
-                if (['style', 'data', 'attrs'].includes(k)) return;
+        args.forEach(arg => {
+            if (arg !== null && typeof arg === 'object' && !(arg instanceof Element) && !(arg instanceof DocumentFragment) && !Array.isArray(arg) && typeof arg.subscribe !== 'function') {
+                if (arg.style) Object.assign(el.style, arg.style);
+                if (arg.data) Object.assign(el.dataset, arg.data);
+                if (arg.attrs) Object.assign(el, arg.attrs);
                 
-                if (k === 'on' && typeof v === 'object' && v !== null) {
-                    Object.entries(v).forEach(([evt, handler]) => {
-                        el.addEventListener(evt, handler);
-                    });
-                }
-                else if (k.startsWith('on')) {
-                    let evName = k.slice(2).toLowerCase();
-                    el.addEventListener(evName, v);
-                }
-                else if (k === 'class' || k === 'className') {
-                    el.className = parseClass(v);
-                }
-                else if (k in el) {
-                    el[k] = v;
-                }
-                else {
-                    el.setAttribute(k, v);
-                }
-            });
-        } else {
-            appendChild(arg);
-        }
-    });
+                Object.entries(arg).forEach(([k, v]) => {
+                    if (['style', 'data', 'attrs'].includes(k)) return;
+                    
+                    if (k === 'on' && typeof v === 'object' && v !== null) {
+                        Object.entries(v).forEach(([evt, handler]) => {
+                            el.addEventListener(evt, handler);
+                        });
+                    }
+                    else if (k.startsWith('on')) {
+                        let evName = k.slice(2).toLowerCase();
+                        el.addEventListener(evName, v);
+                    }
+                    else if (k === 'class' || k === 'className') {
+                        el.className = parseClass(v);
+                    }
+                    else if (k in el) {
+                        el[k] = v;
+                    }
+                    else {
+                        el.setAttribute(k, v);
+                    }
+                });
+            } else {
+                appendChild(arg);
+            }
+        });
 
-    return el;
-}
+        // Trigger onRender hook
+        papyrInstance.plugins.triggerHook('onRender', el);
 
-// Generate shortcuts for tags (e.g. papyr.div(), papyr.span())
-tagList.forEach(tag => {
-    papyr[tag] = (...args) => papyr(tag, ...args);
-});
-
-// Dynamic layout shortcuts for visual alignment
-papyr.flex = {
-    row: (...args) => papyr('div', '.flex-row', ...args),
-    col: (...args) => papyr('div', '.flex-col', ...args),
-    center: (...args) => papyr('div', '.flex-center', ...args),
-    between: (...args) => papyr('div', '.flex-between', ...args),
-    around: (...args) => papyr('div', '.flex-around', ...args),
-    wrap: (...args) => papyr('div', '.flex-wrap', ...args)
-};
-
-papyr.grid = (...args) => papyr('div', '.grid', ...args);
-papyr.container = (...args) => papyr('div', '.container', ...args);
-papyr.row = (...args) => papyr('div', '.row', ...args);
-papyr.col = (...args) => papyr('div', '.col', ...args);
-
-// OOP Class-based component support
-class PapyrComponent {
-    constructor() {
-        if (this.render === undefined) {
-            throw new Error("PapyrComponent must implement a render() method");
-        }
+        return el;
     }
-}
-papyr.component = PapyrComponent;
 
-// Security and validation
-papyr.validate = (schema) => {
-    return (data) => {
-        let errors = {};
-        for (let key in schema) {
-            let rule = schema[key];
-            let value = data[key];
-            if (rule.required && (value === undefined || value === null || value === '')) {
-                errors[key] = "Required field";
+    // 2. Instantiate systems
+    papyrInstance.state = new StateManager(papyrInstance);
+    let compRegistry = new ComponentRegistry(papyrInstance);
+    Object.defineProperty(papyrInstance, 'components', {
+        get() {
+            return compRegistry;
+        },
+        set(value) {
+            if (value && typeof value === 'object') {
+                Object.assign(compRegistry, value);
+            } else {
+                console.warn("Papyr: Attempted to set papyr.components to a non-object value, ignored.");
             }
-            if (rule.type && typeof value !== rule.type) {
-                errors[key] = `Must be of type ${rule.type}`;
-            }
-        }
-        return Object.keys(errors).length ? errors : null;
+        },
+        configurable: true
+    });
+    papyrInstance.events = new EventBus(papyrInstance);
+    papyrInstance.plugins = new PluginSystem(papyrInstance);
+    papyrInstance.runtime = new RuntimeContext(papyrInstance);
+    papyrInstance.diagnostics = new DiagnosticsEngine(papyrInstance);
+
+    // Event aliases
+    papyrInstance.on = (evt, cb) => papyrInstance.events.on(evt, cb);
+    papyrInstance.off = (evt, cb) => papyrInstance.events.off(evt, cb);
+    papyrInstance.emit = (evt, data) => papyrInstance.events.emit(evt, data);
+
+    // Context Export API
+    papyrInstance.exportContext = () => {
+        return {
+            components: papyrInstance.components.list(),
+            state: papyrInstance.state.dump(),
+            routes: papyrInstance.runtime.routes || [],
+            errors: papyrInstance.diagnostics.errors,
+            plugins: papyrInstance.plugins.list()
+        };
     };
-};
 
-// Standard utilities
-papyr.inspect = (component) => {
-    let container = document.createElement('div');
-    container.appendChild(component.cloneNode(true));
-    return container.innerHTML;
-};
-
-papyr.mount = (selector, component) => {
-    let target = document.querySelector(selector);
-    if (target) {
-        target.innerHTML = '';
-        target.appendChild(component);
-    }
-    return target;
-};
-
-papyr.debug = (enable) => {
-    isDebug = enable;
-    if (enable) console.log("📄 Papyr Debug Mode Enabled.");
-};
-
-papyr.delay = (ms) => new Promise(res => setTimeout(res, ms));
-papyr.copy = (text) => navigator.clipboard.writeText(text);
-
-papyr.storage = (key, val) => {
-    if (typeof val === 'undefined') {
-        let data = localStorage.getItem(key);
-        try { return JSON.parse(data); } catch(e) { return data; }
-    }
-    localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
-};
-
-// Document fragments and inline templates
-papyr.fragment = (...children) => {
-    let frag = document.createDocumentFragment();
-    children.forEach(child => {
-        if (Array.isArray(child)) {
-            child.forEach(c => {
-                if (c instanceof Element) frag.appendChild(c);
-                else frag.appendChild(document.createTextNode(String(c)));
-            });
-        } else if (child instanceof Element || child instanceof DocumentFragment) {
-            frag.appendChild(child);
-        } else if (child !== null && child !== undefined) {
-            frag.appendChild(document.createTextNode(String(child)));
+    // Plugin registry supporting legacy function plugins and formal object layouts
+    papyrInstance.use = (plugin) => {
+        if (typeof plugin === 'function') {
+            plugin(papyrInstance);
+        } else if (plugin && typeof plugin === 'object') {
+            papyrInstance.plugins.register(plugin);
         }
+        return papyrInstance;
+    };
+
+    // Tag shortcuts
+    tagList.forEach(tag => {
+        papyrInstance[tag] = (...args) => papyrInstance(tag, ...args);
     });
-    return frag;
-};
 
-papyr.html = (htmlString) => {
-    let template = document.createElement('template');
-    template.innerHTML = htmlString.trim();
-    return template.content.cloneNode(true);
-};
+    // Flex/grid dynamic layout shortcuts
+    papyrInstance.flex = {
+        row: (...args) => papyrInstance('div', '.flex-row', ...args),
+        col: (...args) => papyrInstance('div', '.flex-col', ...args),
+        center: (...args) => papyrInstance('div', '.flex-center', ...args),
+        between: (...args) => papyrInstance('div', '.flex-between', ...args),
+        around: (...args) => papyrInstance('div', '.flex-around', ...args),
+        wrap: (...args) => papyrInstance('div', '.flex-wrap', ...args)
+    };
+    papyrInstance.grid = (...args) => papyrInstance('div', '.grid', ...args);
+    papyrInstance.container = (...args) => papyrInstance('div', '.container', ...args);
+    papyrInstance.row = (...args) => papyrInstance('div', '.row', ...args);
+    papyrInstance.col = (...args) => papyrInstance('div', '.col', ...args);
 
-// Visual animations transition engine
-papyr.fadeIn = (el, duration = 400) => {
-    el.style.opacity = '0';
-    el.style.transition = `opacity ${duration}ms ease`;
-    requestAnimationFrame(() => { el.style.opacity = '1'; });
-};
-
-papyr.fadeOut = (el, duration = 400) => {
-    el.style.opacity = '1';
-    el.style.transition = `opacity ${duration}ms ease`;
-    requestAnimationFrame(() => { el.style.opacity = '0'; });
-    setTimeout(() => el.remove(), duration);
-};
-
-papyr.animate = (el, properties, duration = 400) => {
-    el.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
-    requestAnimationFrame(() => {
-        Object.assign(el.style, properties);
-    });
-};
-
-papyr.use = (plugin) => plugin(papyr);
-
-papyr.loadFramework = (framework) => {
-    let id = `papyr-fw-${framework}`;
-    if (document.getElementById(id)) return;
-    
-    if (framework === 'tailwind') {
-        let script = document.createElement('script');
-        script.id = id;
-        script.src = 'https://cdn.tailwindcss.com';
-        document.head.appendChild(script);
-    } else if (framework === 'bootstrap') {
-        let link = document.createElement('link');
-        link.id = id;
-        link.rel = 'stylesheet';
-        link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
-        
-        let customStyle = document.getElementById('papyr-complete-styles') || document.querySelector('link[href*="styles.css"]') || document.querySelector('style');
-        if (customStyle && customStyle.parentNode) {
-            customStyle.parentNode.insertBefore(link, customStyle);
-        } else {
-            document.head.appendChild(link);
-        }
-        
-        if (typeof document !== 'undefined') {
-            if (document.documentElement) {
-                document.documentElement.setAttribute('data-bs-theme', 'dark');
-            }
-            if (document.body) {
-                document.body.setAttribute('data-bs-theme', 'dark');
+    // OOP Class-based component support
+    class PapyrComponent {
+        constructor() {
+            if (this.render === undefined) {
+                throw new Error("PapyrComponent must implement a render() method");
             }
         }
     }
-};
+    papyrInstance.component = PapyrComponent;
 
-papyr.init = (config = {}) => {
-    if (config.privacy) {
-        if (papyr.security && typeof papyr.security.setTier === 'function') {
-            papyr.security.setTier(config.privacy);
-        } else {
-            papyr._initialPrivacy = config.privacy;
+    // Security validation schemas
+    papyrInstance.validate = (schema) => {
+        return (data) => {
+            let errors = {};
+            for (let key in schema) {
+                let rule = schema[key];
+                let value = data[key];
+                if (rule.required && (value === undefined || value === null || value === '')) {
+                    errors[key] = "Required field";
+                }
+                if (rule.type && typeof value !== rule.type) {
+                    errors[key] = `Must be of type ${rule.type}`;
+                }
+            }
+            return Object.keys(errors).length ? errors : null;
+        };
+    };
+
+    // Standard utilities
+    papyrInstance.inspect = (component) => {
+        let container = document.createElement('div');
+        container.appendChild(component.cloneNode(true));
+        return container.innerHTML;
+    };
+
+    papyrInstance.mount = (selector, component) => {
+        let target = document.querySelector(selector);
+        if (target) {
+            target.innerHTML = '';
+            target.appendChild(component);
         }
-    }
-    if (config.debug !== undefined) {
-        papyr.debug(config.debug);
-    }
-};
+        return target;
+    };
 
-let previousPapyr = typeof window !== 'undefined' ? window.papyr : null;
-papyr.noConflict = () => {
-    if (typeof window !== 'undefined') {
-        window.papyr = previousPapyr;
-    }
-    return papyr;
-};
+    papyrInstance.debug = (enable) => {
+        isDebug = enable;
+        if (enable) console.log("📄 Papyr Debug Mode Enabled.");
+    };
+
+    papyrInstance.delay = (ms) => new Promise(res => setTimeout(res, ms));
+    papyrInstance.copy = (text) => navigator.clipboard.writeText(text);
+
+    papyrInstance.fragment = (...children) => {
+        let frag = document.createDocumentFragment();
+        children.forEach(child => {
+            if (Array.isArray(child)) {
+                child.forEach(c => {
+                    if (c instanceof Element) frag.appendChild(c);
+                    else frag.appendChild(document.createTextNode(String(c)));
+                });
+            } else if (child instanceof Element || child instanceof DocumentFragment) {
+                frag.appendChild(child);
+            } else if (child !== null && child !== undefined) {
+                frag.appendChild(document.createTextNode(String(child)));
+            }
+        });
+        return frag;
+    };
+
+    papyrInstance.html = (htmlString) => {
+        let template = document.createElement('template');
+        template.innerHTML = htmlString.trim();
+        return template.content.cloneNode(true);
+    };
+
+    // Visual animations transition engine
+    papyrInstance.fadeIn = (el, duration = 400) => {
+        el.style.opacity = '0';
+        el.style.transition = `opacity ${duration}ms ease`;
+        requestAnimationFrame(() => { el.style.opacity = '1'; });
+    };
+
+    papyrInstance.fadeOut = (el, duration = 400) => {
+        el.style.opacity = '1';
+        el.style.transition = `opacity ${duration}ms ease`;
+        requestAnimationFrame(() => { el.style.opacity = '0'; });
+        setTimeout(() => el.remove(), duration);
+    };
+
+    papyrInstance.animate = (el, properties, duration = 400) => {
+        el.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        requestAnimationFrame(() => {
+            Object.assign(el.style, properties);
+        });
+    };
+
+    papyrInstance.loadFramework = (framework) => {
+        let id = `papyr-fw-${framework}`;
+        if (document.getElementById(id)) return;
+        
+        if (framework === 'tailwind') {
+            let script = document.createElement('script');
+            script.id = id;
+            script.src = 'https://cdn.tailwindcss.com';
+            document.head.appendChild(script);
+        } else if (framework === 'bootstrap') {
+            let link = document.createElement('link');
+            link.id = id;
+            link.rel = 'stylesheet';
+            link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
+            
+            let customStyle = document.getElementById('papyr-complete-styles') || document.querySelector('link[href*="styles.css"]') || document.querySelector('style');
+            if (customStyle && customStyle.parentNode) {
+                customStyle.parentNode.insertBefore(link, customStyle);
+            } else {
+                document.head.appendChild(link);
+            }
+            
+            if (typeof document !== 'undefined') {
+                if (document.documentElement) {
+                    document.documentElement.setAttribute('data-bs-theme', 'dark');
+                }
+                if (document.body) {
+                    document.body.setAttribute('data-bs-theme', 'dark');
+                }
+            }
+        }
+    };
+
+    papyrInstance.init = (config = {}) => {
+        if (config.privacy) {
+            if (papyrInstance.security && typeof papyrInstance.security.setTier === 'function') {
+                papyrInstance.security.setTier(config.privacy);
+            } else {
+                papyrInstance._initialPrivacy = config.privacy;
+            }
+        }
+        if (config.debug !== undefined) {
+            papyrInstance.debug(config.debug);
+        }
+    };
+
+    let previousPapyr = typeof window !== 'undefined' ? window.papyr : null;
+    papyrInstance.noConflict = () => {
+        if (typeof window !== 'undefined') {
+            window.papyr = previousPapyr;
+        }
+        return papyrInstance;
+    };
+
+    papyrInstance.el = papyrInstance;
+
+    // Run registered core initializers!
+    coreInitializers.forEach(init => {
+        try { init(papyrInstance); } catch(e) { console.error("Error during core initialization", e); }
+    });
+
+    return papyrInstance;
+}
 
 if (typeof window !== 'undefined') {
-    window.papyr = papyr;
+    window.createPapyr = createPapyr;
 }
 
 
 // --- MODULE: core/security.js ---
 /**
- * PAPER SECURITY KERNEL
+ * PAPYR SECURITY KERNEL
  * Enterprise-grade XSS Sanitization and Injection Prevention.
  * Web App Tracking Transparency (WATT) script and storage filter.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
+
 (function() {
     let tempStorage = {};
     const trackingKeys = ['_ga', '_gid', '_fbp', '_uid_tracking_id', 'tracking', 'analytics', 'pixel', 'adsense'];
@@ -449,169 +669,171 @@ if (typeof window !== 'undefined') {
         if (typeof localStorage.removeItem === 'function') originalRemoveItem = localStorage.removeItem.bind(localStorage);
     }
 
-    papyr.security = {
-        _isActive: true, // Enabled by default for safety
-        currentTier: 'default',
-        hasConsent: false,
-        _scriptsBlocked: false,
+    coreInitializers.push((papyr) => {
+        papyr.security = {
+            _isActive: true, // Enabled by default for safety
+            currentTier: 'default',
+            hasConsent: false,
+            _scriptsBlocked: false,
 
-        setTier(tier) {
-            this.currentTier = tier;
-            if (tier === 'high') {
-                this.blockThirdPartyScripts();
-            }
-        },
+            setTier(tier) {
+                this.currentTier = tier;
+                if (tier === 'high') {
+                    this.blockThirdPartyScripts();
+                }
+            },
 
-        setConsent(granted) {
-            this.hasConsent = !!granted;
-            if (granted) {
-                // Flush tempStorage back to real localStorage
-                try {
-                    if (originalSetItem) {
-                        Object.entries(tempStorage).forEach(([k, v]) => {
-                            originalSetItem(k, v);
-                        });
-                    }
-                    tempStorage = {};
-                } catch(e) {}
-            } else {
-                // Clear tracking keys from real localStorage
-                try {
-                    if (originalRemoveItem && originalGetItem) {
-                        trackingKeys.forEach(tk => {
-                            for (let i = localStorage.length - 1; i >= 0; i--) {
-                                let key = localStorage.key(i);
-                                if (key && key.toLowerCase().includes(tk)) {
-                                    originalRemoveItem(key);
-                                }
-                            }
-                        });
-                    }
-                } catch(e) {}
-            }
-        },
-
-        shouldBlockScript(src) {
-            if (this.currentTier === 'none') return false;
-            if (!src || typeof src !== 'string') return false;
-            
-            const trackingDomains = ['analytics', 'pixel', 'doubleclick', 'google-analytics', 'adsense', 'ad-tracker', 'facebook.net', 'adnxs'];
-            const isTracker = trackingDomains.some(d => src.toLowerCase().includes(d));
-            
-            if (this.currentTier === 'high' && isTracker) return true;
-            if (this.currentTier === 'default' && !this.hasConsent && isTracker) return true;
-            return false;
-        },
-
-        blockThirdPartyScripts() {
-            if (typeof document === 'undefined') return;
-            if (this._scriptsBlocked) return;
-            this._scriptsBlocked = true;
-            
-            const originalCreateElement = document.createElement;
-            document.createElement = function(tag, options) {
-                const el = originalCreateElement.call(document, tag, options);
-                if (tag && tag.toLowerCase() === 'script') {
-                    const originalSetAttribute = el.setAttribute;
-                    el.setAttribute = function(k, v) {
-                        if (k && k.toLowerCase() === 'src' && papyr.security.shouldBlockScript(v)) {
-                            console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
-                            return;
+            setConsent(granted) {
+                this.hasConsent = !!granted;
+                if (granted) {
+                    // Flush tempStorage back to real localStorage
+                    try {
+                        if (originalSetItem) {
+                            Object.entries(tempStorage).forEach(([k, v]) => {
+                                originalSetItem(k, v);
+                            });
                         }
-                        originalSetAttribute.apply(this, arguments);
-                    };
-                    Object.defineProperty(el, 'src', {
-                        set(v) {
-                            if (papyr.security.shouldBlockScript(v)) {
+                        tempStorage = {};
+                    } catch(e) {}
+                } else {
+                    // Clear tracking keys from real localStorage
+                    try {
+                        if (originalRemoveItem && originalGetItem) {
+                            trackingKeys.forEach(tk => {
+                                for (let i = localStorage.length - 1; i >= 0; i--) {
+                                    let key = localStorage.key(i);
+                                    if (key && key.toLowerCase().includes(tk)) {
+                                        originalRemoveItem(key);
+                                    }
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                }
+            },
+
+            shouldBlockScript(src) {
+                if (this.currentTier === 'none') return false;
+                if (!src || typeof src !== 'string') return false;
+                
+                const trackingDomains = ['analytics', 'pixel', 'doubleclick', 'google-analytics', 'adsense', 'ad-tracker', 'facebook.net', 'adnxs'];
+                const isTracker = trackingDomains.some(d => src.toLowerCase().includes(d));
+                
+                if (this.currentTier === 'high' && isTracker) return true;
+                if (this.currentTier === 'default' && !this.hasConsent && isTracker) return true;
+                return false;
+            },
+
+            blockThirdPartyScripts() {
+                if (typeof document === 'undefined') return;
+                if (this._scriptsBlocked) return;
+                this._scriptsBlocked = true;
+                
+                const originalCreateElement = document.createElement;
+                document.createElement = function(tag, options) {
+                    const el = originalCreateElement.call(document, tag, options);
+                    if (tag && tag.toLowerCase() === 'script') {
+                        const originalSetAttribute = el.setAttribute;
+                        el.setAttribute = function(k, v) {
+                            if (k && k.toLowerCase() === 'src' && papyr.security.shouldBlockScript(v)) {
                                 console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
                                 return;
                             }
-                            originalSetAttribute.call(el, 'src', v);
-                        },
-                        get() { return el.getAttribute('src'); },
-                        configurable: true
-                    });
+                            originalSetAttribute.apply(this, arguments);
+                        };
+                        Object.defineProperty(el, 'src', {
+                            set(v) {
+                                if (papyr.security.shouldBlockScript(v)) {
+                                    console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                                    return;
+                                }
+                                originalSetAttribute.call(el, 'src', v);
+                            },
+                            get() { return el.getAttribute('src'); },
+                            configurable: true
+                        });
+                    }
+                    return el;
+                };
+            },
+
+            shouldSandboxStorage(key) {
+                if (this.currentTier === 'none') return false;
+                if (this.currentTier === 'high') return true;
+                if (!this.hasConsent) {
+                    return trackingKeys.some(tk => key.toLowerCase().includes(tk));
                 }
-                return el;
-            };
-        },
+                return false;
+            },
 
-        shouldSandboxStorage(key) {
-            if (this.currentTier === 'none') return false;
-            if (this.currentTier === 'high') return true;
-            if (!this.hasConsent) {
-                return trackingKeys.some(tk => key.toLowerCase().includes(tk));
-            }
-            return false;
-        },
+            /**
+             * Strip dangerous tags and attributes from raw HTML strings.
+             */
+            sanitize(html) {
+                if (!this._isActive || typeof html !== 'string') return html;
+                
+                // 1. Remove <script> tags and their contents
+                let clean = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                
+                // 2. Remove inline event handlers (onclick, onmouseover, etc)
+                clean = clean.replace(/ on\w+="[^"]*"/gi, '');
+                clean = clean.replace(/ on\w+='[^']*'/gi, '');
+                clean = clean.replace(/ on\w+=\w+/gi, '');
+                
+                // 3. Remove javascript: pseudo-protocols
+                clean = clean.replace(/href="javascript:[^"]*"/gi, 'href="#"');
+                clean = clean.replace(/src="javascript:[^"]*"/gi, 'src=""');
 
-        /**
-         * Strip dangerous tags and attributes from raw HTML strings.
-         */
-        sanitize(html) {
-            if (!this._isActive || typeof html !== 'string') return html;
-            
-            // 1. Remove <script> tags and their contents
-            let clean = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-            
-            // 2. Remove inline event handlers (onclick, onmouseover, etc)
-            clean = clean.replace(/ on\w+="[^"]*"/gi, '');
-            clean = clean.replace(/ on\w+='[^']*'/gi, '');
-            clean = clean.replace(/ on\w+=\w+/gi, '');
-            
-            // 3. Remove javascript: pseudo-protocols
-            clean = clean.replace(/href="javascript:[^"]*"/gi, 'href="#"');
-            clean = clean.replace(/src="javascript:[^"]*"/gi, 'src=""');
+                if (html !== clean) {
+                    if (papyr.warn) papyr.warn("Papyr Security Interceptor blocked a potential XSS payload.");
+                }
+                return clean;
+            },
 
-            if (html !== clean) {
-                if (papyr.warn) papyr.warn("Papyr Security Interceptor blocked a potential XSS payload.");
-            }
-            return clean;
-        },
+            /**
+             * Allow enterprise users to register custom security hooks
+             */
+            use(provider) {
+                if (provider === 'disable') {
+                    this._isActive = false;
+                    if (papyr.warn) papyr.warn("Papyr Security Kernel DISABLED. You are vulnerable to XSS.");
+                }
+            },
 
-        /**
-         * Allow enterprise users to register custom security hooks
-         */
-        use(provider) {
-            if (provider === 'disable') {
-                this._isActive = false;
-                if (papyr.warn) papyr.warn("Papyr Security Kernel DISABLED. You are vulnerable to XSS.");
-            }
-        },
-
-        /**
-         * Lightweight Client-Side Storage Encryption (Obfuscation)
-         * Prevents generic localStorage scraping by malicious extensions.
-         */
-        encrypt(text, password) {
-            if (!text) return text;
-            let result = '';
-            for (let i = 0; i < text.length; i++) {
-                result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
-            }
-            return typeof window !== 'undefined' ? window.btoa(result) : result;
-        },
-
-        decrypt(encodedText, password) {
-            if (!encodedText) return encodedText;
-            try {
-                let text = typeof window !== 'undefined' ? window.atob(encodedText) : encodedText;
+            /**
+             * Lightweight Client-Side Storage Encryption (Obfuscation)
+             * Prevents generic localStorage scraping by malicious extensions.
+             */
+            encrypt(text, password) {
+                if (!text) return text;
                 let result = '';
                 for (let i = 0; i < text.length; i++) {
                     result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
                 }
-                return result;
-            } catch(e) {
-                if (papyr.warn) papyr.warn("Papyr Security: Decryption failed (invalid key or corrupted data).");
-                return null;
+                return typeof window !== 'undefined' ? window.btoa(result) : result;
+            },
+
+            decrypt(encodedText, password) {
+                if (!encodedText) return encodedText;
+                try {
+                    let text = typeof window !== 'undefined' ? window.atob(encodedText) : encodedText;
+                    let result = '';
+                    for (let i = 0; i < text.length; i++) {
+                        result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                    }
+                    return result;
+                } catch(e) {
+                    if (papyr.warn) papyr.warn("Papyr Security: Decryption failed (invalid key or corrupted data).");
+                    return null;
+                }
             }
-        }
-    };
+        };
+    });
 
     // Install LocalStorage Interception
     if (typeof window !== 'undefined' && window.localStorage) {
         localStorage.setItem = function(key, val) {
-            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+            if (window.papyr && window.papyr.security && window.papyr.security.shouldSandboxStorage(key)) {
                 tempStorage[key] = val;
                 return;
             }
@@ -619,14 +841,14 @@ if (typeof window !== 'undefined') {
         };
         
         localStorage.getItem = function(key) {
-            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+            if (window.papyr && window.papyr.security && window.papyr.security.shouldSandboxStorage(key)) {
                 return tempStorage[key] !== undefined ? tempStorage[key] : null;
             }
             return originalGetItem ? originalGetItem(key) : null;
         };
         
         localStorage.removeItem = function(key) {
-            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+            if (window.papyr && window.papyr.security && window.papyr.security.shouldSandboxStorage(key)) {
                 delete tempStorage[key];
                 return;
             }
@@ -641,132 +863,161 @@ if (typeof window !== 'undefined') {
  * PAPYR REACTIVITY SYSTEM
  * 
  * Auto-tracking reactive state variables and computed logic nodes.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-/**
- * Creates an auto-tracking reactive state variable.
- * 
- * @param {*} val Initial reactive state value
- * @returns {PaperState} Reactive State accessor interface
- */
-papyr.state = (val) => {
-    let subscribers = new Set();
-    return {
-        get value() {
-            if (activeEffect) subscribers.add(activeEffect);
-            return val;
-        },
-        set value(newVal) {
-            val = newVal;
-            subscribers.forEach(sub => sub(newVal));
-        },
-        subscribe(sub) {
-            subscribers.add(sub);
-            sub(val);
-            return () => subscribers.delete(sub);
-        }
+coreInitializers.push((papyr) => {
+    
+    /**
+     * Creates an auto-tracking reactive state variable.
+     * 
+     * @param {*} val Initial reactive state value
+     * @returns {PaperState} Reactive State accessor interface
+     */
+    papyr.state = (val) => {
+        let subscribers = new Set();
+        let stateObj = {
+            get value() {
+                if (activeEffect) subscribers.add(activeEffect);
+                return val;
+            },
+            set value(newVal) {
+                let oldVal = val;
+                val = newVal;
+                papyr.diagnostics.trackUpdate(stateObj, newVal, oldVal);
+                subscribers.forEach(sub => sub(newVal));
+                
+                // Trigger hooks
+                papyr.plugins.triggerHook('onUpdate', stateObj);
+            },
+            subscribe(sub) {
+                subscribers.add(sub);
+                sub(val);
+                return () => subscribers.delete(sub);
+            },
+            dump() {
+                return val;
+            }
+        };
+        papyr.state.register(stateObj);
+        return stateObj;
     };
-};
 
-/**
- * Generates an auto-updating computed reactive variable.
- * 
- * @param {function} fn Tracked callback evaluating state operations
- * @returns {PaperComputed} Read-only tracking interface
- */
-papyr.computed = (fn) => {
-    let subscribers = new Set();
-    let currentVal;
-    let effect = () => {
+    // Initialize state registries on the state function itself for this kernel instance
+    papyr.state.states = new Set();
+    papyr.state.register = (s) => papyr.state.states.add(s);
+    papyr.state.list = () => Array.from(papyr.state.states);
+    papyr.state.dump = () => {
+        let res = {};
+        let idx = 0;
+        papyr.state.states.forEach(s => {
+            res[`state_${idx++}`] = s.value;
+        });
+        return res;
+    };
+
+    /**
+     * Generates an auto-updating computed reactive variable.
+     * 
+     * @param {function} fn Tracked callback evaluating state operations
+     * @returns {PaperComputed} Read-only tracking interface
+     */
+    papyr.computed = (fn) => {
+        let subscribers = new Set();
+        let currentVal;
+        let effect = () => {
+            currentVal = fn();
+            subscribers.forEach(sub => sub(currentVal));
+        };
+        
+        activeEffect = effect;
         currentVal = fn();
-        subscribers.forEach(sub => sub(currentVal));
+        activeEffect = null;
+        
+        return {
+            get value() {
+                if (activeEffect) subscribers.add(activeEffect);
+                return currentVal;
+            },
+            subscribe(sub) {
+                subscribers.add(sub);
+                sub(currentVal);
+                return () => subscribers.delete(sub);
+            }
+        };
     };
-    
-    activeEffect = effect;
-    currentVal = fn();
-    activeEffect = null;
-    
-    return {
-        get value() {
-            if (activeEffect) subscribers.add(activeEffect);
-            return currentVal;
-        },
-        subscribe(sub) {
-            subscribers.add(sub);
-            sub(currentVal);
-            return () => subscribers.delete(sub);
-        }
-    };
-};
 
-/**
- * Switches visual DOM subtrees reactively based on condition updates.
- * 
- * @param {PaperState} conditionState Reactive condition state to track
- * @param {HTMLElement|function} trueVal Rendered target when state is truthy
- * @param {HTMLElement|function} [falseVal] Optional target when state is falsy
- * @returns {HTMLDivElement} Content container fragment
- */
-papyr.if = (conditionState, trueVal, falseVal) => {
-    let container = papyr.div({ style: { display: 'contents' } });
-    let currentEl = null;
-    
-    let update = (val) => {
-        if (currentEl) currentEl.remove();
-        let target = val ? trueVal : falseVal;
-        if (target) {
-            currentEl = typeof target === 'function' ? target() : target;
-            container.appendChild(currentEl);
+    /**
+     * Switches visual DOM subtrees reactively based on condition updates.
+     * 
+     * @param {PaperState} conditionState Reactive condition state to track
+     * @param {HTMLElement|function} trueVal Rendered target when state is truthy
+     * @param {HTMLElement|function} [falseVal] Optional target when state is falsy
+     * @returns {HTMLDivElement} Content container fragment
+     */
+    papyr.if = (conditionState, trueVal, falseVal) => {
+        let container = papyr.div({ style: { display: 'contents' } });
+        let currentEl = null;
+        
+        let update = (val) => {
+            if (currentEl) currentEl.remove();
+            let target = val ? trueVal : falseVal;
+            if (target) {
+                currentEl = typeof target === 'function' ? target() : target;
+                container.appendChild(currentEl);
+            } else {
+                currentEl = null;
+            }
+        };
+        
+        if (conditionState && typeof conditionState.subscribe === 'function') {
+            conditionState.subscribe(update);
         } else {
-            currentEl = null;
+            update(!!conditionState);
         }
+        return container;
     };
-    
-    if (conditionState && typeof conditionState.subscribe === 'function') {
-        conditionState.subscribe(update);
-    } else {
-        update(!!conditionState);
-    }
-    return container;
-};
 
-/**
- * Reactively renders a list of DOM elements from an array state.
- * 
- * @param {PaperState} arrayState Reactive state containing an array
- * @param {function} renderCallback Function returning an HTMLElement for each item
- * @returns {HTMLDivElement} Content container fragment
- */
-papyr.for = (arrayState, renderCallback) => {
-    let container = papyr.div({ style: { display: 'contents' } });
-    
-    let update = (arr) => {
-        container.innerHTML = '';
-        if (Array.isArray(arr)) {
-            arr.forEach((item, index) => {
-                let el = renderCallback(item, index);
-                if (el instanceof Element || el instanceof DocumentFragment) {
-                    container.appendChild(el);
-                }
-            });
+    /**
+     * Reactively renders a list of DOM elements from an array state.
+     * 
+     * @param {PaperState} arrayState Reactive state containing an array
+     * @param {function} renderCallback Function returning an HTMLElement for each item
+     * @returns {HTMLDivElement} Content container fragment
+     */
+    papyr.for = (arrayState, renderCallback) => {
+        let container = papyr.div({ style: { display: 'contents' } });
+        
+        let update = (arr) => {
+            container.innerHTML = '';
+            if (Array.isArray(arr)) {
+                arr.forEach((item, index) => {
+                    let el = renderCallback(item, index);
+                    if (el instanceof Element || el instanceof DocumentFragment) {
+                        container.appendChild(el);
+                    }
+                });
+            }
+        };
+        
+        if (arrayState && typeof arrayState.subscribe === 'function') {
+            arrayState.subscribe(update);
+        } else {
+            update(arrayState);
         }
+        return container;
     };
-    
-    if (arrayState && typeof arrayState.subscribe === 'function') {
-        arrayState.subscribe(update);
-    } else {
-        update(arrayState);
-    }
-    return container;
-};
+});
 
 
 // --- MODULE: core/router.js ---
 /**
- * PAPER ROUTER
+ * PAPYR ROUTER
  * Zero-configuration Hash SPA Router.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
-(function() {
+
+coreInitializers.push((papyr) => {
     let routes = [];
     let currentView = papyr.state(null);
     let pathParams = papyr.state({});
@@ -785,6 +1036,9 @@ papyr.for = (arrayState, renderCallback) => {
             keys: (cleanPath.match(/:\w+/g) || []).map(k => k.slice(1)),
             componentFn
         });
+        
+        // Attach to runtime context for context export APIs
+        papyr.runtime.routes = routes;
     };
 
     /**
@@ -860,18 +1114,18 @@ papyr.for = (arrayState, renderCallback) => {
 
         return routeNode;
     };
-
-})();
+});
 
 
 // --- MODULE: core/math.js ---
 /**
- * PAPER MATHEMATICAL LOGIC SYSTEM
+ * PAPYR MATHEMATICAL LOGIC SYSTEM
  * 
  * Auto-updating computed mathematical operations accepting standard numbers or reactive state nodes.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-(function() {
+coreInitializers.push((papyr) => {
     const flatten = (arr) => arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatten(val) : val), []);
     const getVal = (x) => (x && typeof x.subscribe === 'function' ? x.value : Number(x || 0));
 
@@ -937,272 +1191,367 @@ papyr.for = (arrayState, renderCallback) => {
             return Math.round(v * factor) / factor;
         })
     };
-})();
+});
 
 
 // --- MODULE: core/db.js ---
 /**
  * PAPYR DATA SYSTEM (Unified DB API)
  * Seamlessly integrates LocalStorage, SessionStorage, IndexedDB, and SQLite endpoints.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-papyr.db = (collectionName, engine = 'local') => {
+coreInitializers.push((papyr) => {
     
-    // Engine Drivers
-    const drivers = {
-        'local': {
-            get: () => {
-                try { return JSON.parse(localStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
-                catch(e) { return []; }
+    papyr.db = (collectionName, engine = 'local') => {
+        
+        // Engine Drivers
+        const drivers = {
+            'local': {
+                get: () => {
+                    try { return JSON.parse(localStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
+                    catch(e) { return []; }
+                },
+                set: (data) => localStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
             },
-            set: (data) => localStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
-        },
-        'session': {
-            get: () => {
-                try { return JSON.parse(sessionStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
-                catch(e) { return []; }
+            'session': {
+                get: () => {
+                    try { return JSON.parse(sessionStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
+                    catch(e) { return []; }
+                },
+                set: (data) => sessionStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
             },
-            set: (data) => sessionStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
-        },
-        'firebase': {
-            // Firebase hollow bridge (requires papyr.firebase to be initialized by user)
-            get: () => [], // Handled async in real implementation
-            set: (data) => {
-                if (papyr.firebase && papyr.firebase.db) {
-                    papyr.firebase.db(collectionName).set(data);
-                } else {
-                    console.warn("PaperDB: Firebase engine selected but papyr.firebase is not initialized.");
+            'firebase': {
+                get: () => [], // Handled async in real implementation
+                set: (data) => {
+                    if (papyr.firebase && papyr.firebase.db) {
+                        papyr.firebase.db(collectionName).set(data);
+                    } else {
+                        console.warn("PaperDB: Firebase engine selected but papyr.firebase is not initialized.");
+                    }
+                }
+            },
+            'sqlite': {
+                get: () => [],
+                set: (data) => {
+                    if (papyr.sqlite) papyr.sqlite.insert(collectionName, data);
                 }
             }
-        },
-        'sqlite': {
-            // SQLite hollow bridge (requires sql.js or similar)
-            get: () => [],
-            set: (data) => {
-                if (papyr.sqlite) papyr.sqlite.insert(collectionName, data);
+        };
+
+        let driver = drivers[engine] || drivers['local'];
+        let state = papyr.state(driver.get());
+
+        // Watchers for reactivity
+        let watchers = [];
+
+        const sync = () => {
+            driver.set(state.value);
+            watchers.forEach(cb => cb(state.value));
+        };
+
+        return {
+            state,
+            
+            insert(item) {
+                let record = { id: Date.now().toString(36), createdAt: new Date().toISOString(), ...item };
+                state.value = [...state.value, record];
+                sync();
+                return record;
+            },
+            
+            find(id) {
+                return state.value.find(record => record.id === id);
+            },
+            
+            update(id, data) {
+                state.value = state.value.map(record => 
+                    record.id === id ? { ...record, ...data, updatedAt: new Date().toISOString() } : record
+                );
+                sync();
+            },
+            
+            delete(id) {
+                state.value = state.value.filter(record => record.id !== id);
+                sync();
+            },
+            
+            clear() {
+                state.value = [];
+                sync();
+            },
+            
+            watch(callback) {
+                watchers.push(callback);
+                callback(state.value); // immediate execution
+                return () => watchers = watchers.filter(cb => cb !== callback); // unsubscribe
             }
+        };
+    };
+
+    // Upgraded storage helper function with dual call signature compatibility (Getter/Setter + object properties)
+    const storageFunc = (key, val) => {
+        if (typeof val === 'undefined') {
+            let data = localStorage.getItem(key);
+            try { return JSON.parse(data); } catch(e) { return data; }
         }
+        localStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
     };
-
-    let driver = drivers[engine] || drivers['local'];
-    let state = papyr.state(driver.get());
-
-    // Watchers for reactivity
-    let watchers = [];
-
-    const sync = () => {
-        driver.set(state.value);
-        watchers.forEach(cb => cb(state.value));
-    };
-
-    return {
-        state,
-        
-        insert(item) {
-            let record = { id: Date.now().toString(36), createdAt: new Date().toISOString(), ...item };
-            state.value = [...state.value, record];
-            sync();
-            return record;
-        },
-        
-        find(id) {
-            return state.value.find(record => record.id === id);
-        },
-        
-        update(id, data) {
-            state.value = state.value.map(record => 
-                record.id === id ? { ...record, ...data, updatedAt: new Date().toISOString() } : record
-            );
-            sync();
-        },
-        
-        delete(id) {
-            state.value = state.value.filter(record => record.id !== id);
-            sync();
-        },
-        
-        clear() {
-            state.value = [];
-            sync();
-        },
-        
-        watch(callback) {
-            watchers.push(callback);
-            callback(state.value); // immediate execution
-            return () => watchers = watchers.filter(cb => cb !== callback); // unsubscribe
-        }
-    };
-};
-
-// Aliases for standard unified access
-papyr.storage = {
-    set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-    get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
-    secureSet: (k, v, password) => {
+    storageFunc.set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+    storageFunc.get = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } };
+    storageFunc.secureSet = (k, v, password) => {
         if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
         localStorage.setItem(k, papyr.security.encrypt(JSON.stringify(v), password));
-    },
-    secureGet: (k, password) => {
+    };
+    storageFunc.secureGet = (k, password) => {
         if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
         let enc = localStorage.getItem(k);
         if (!enc) return null;
         try { return JSON.parse(papyr.security.decrypt(enc, password)); } catch(e) { return null; }
-    }
-};
+    };
+    papyr.storage = storageFunc;
 
-papyr.session = {
-    set: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)),
-    get: (k) => { try { return JSON.parse(sessionStorage.getItem(k)); } catch(e) { return null; } },
-    secureSet: (k, v, password) => {
+    // Upgraded session helper function with dual call signature compatibility
+    const sessionFunc = (key, val) => {
+        if (typeof val === 'undefined') {
+            let data = sessionStorage.getItem(key);
+            try { return JSON.parse(data); } catch(e) { return data; }
+        }
+        sessionStorage.setItem(key, typeof val === 'object' ? JSON.stringify(val) : val);
+    };
+    sessionFunc.set = (k, v) => sessionStorage.setItem(k, JSON.stringify(v));
+    sessionFunc.get = (k) => { try { return JSON.parse(sessionStorage.getItem(k)); } catch(e) { return null; } };
+    sessionFunc.secureSet = (k, v, password) => {
         if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
         sessionStorage.setItem(k, papyr.security.encrypt(JSON.stringify(v), password));
-    },
-    secureGet: (k, password) => {
+    };
+    sessionFunc.secureGet = (k, password) => {
         if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
         let enc = sessionStorage.getItem(k);
         if (!enc) return null;
         try { return JSON.parse(papyr.security.decrypt(enc, password)); } catch(e) { return null; }
-    }
-};
+    };
+    papyr.session = sessionFunc;
+});
 
 
 // --- MODULE: core/orm.js ---
 /**
  * PAPER ORM SYSTEM
  * Object-Relational Mapping for Papyr.js
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-class PapyrModel {
-    constructor(data = {}) {
-        Object.assign(this, data);
-    }
-
-    // Instance method for saving to DB
-    save() {
-        const cname = this.constructor.name.toLowerCase() + 's';
-        if (this.id) {
-            papyr.db(cname).update(this.id, this);
-        } else {
-            let record = papyr.db(cname).insert(this);
-            this.id = record.id;
+coreInitializers.push((papyr) => {
+    class PapyrModel {
+        constructor(data = {}) {
+            Object.assign(this, data);
         }
-        return this;
-    }
 
-    // Instance method for deleting from DB
-    delete() {
-        const cname = this.constructor.name.toLowerCase() + 's';
-        if (this.id) {
-            papyr.db(cname).delete(this.id);
+        // Instance method for saving to DB
+        save() {
+            const cname = this.constructor.name.toLowerCase() + 's';
+            if (this.id) {
+                papyr.db(cname).update(this.id, this);
+            } else {
+                let record = papyr.db(cname).insert(this);
+                this.id = record.id;
+            }
+            return this;
+        }
+
+        // Instance method for deleting from DB
+        delete() {
+            const cname = this.constructor.name.toLowerCase() + 's';
+            if (this.id) {
+                papyr.db(cname).delete(this.id);
+            }
+        }
+
+        // Static CRUD methods
+        static create(data) {
+            const instance = new this(data);
+            return instance.save();
+        }
+
+        static find(id) {
+            const cname = this.name.toLowerCase() + 's';
+            const data = papyr.db(cname).find(id);
+            return data ? new this(data) : null;
+        }
+
+        static all() {
+            const cname = this.name.toLowerCase() + 's';
+            return papyr.db(cname).state.value.map(data => new this(data));
+        }
+
+        static watch(callback) {
+            const cname = this.name.toLowerCase() + 's';
+            return papyr.db(cname).watch(dataList => {
+                callback(dataList.map(data => new this(data)));
+            });
         }
     }
 
-    // Static CRUD methods
-    static create(data) {
-        const instance = new this(data);
-        return instance.save();
-    }
-
-    static find(id) {
-        const cname = this.name.toLowerCase() + 's';
-        const data = papyr.db(cname).find(id);
-        return data ? new this(data) : null;
-    }
-
-    static all() {
-        const cname = this.name.toLowerCase() + 's';
-        return papyr.db(cname).state.value.map(data => new this(data));
-    }
-
-    static watch(callback) {
-        const cname = this.name.toLowerCase() + 's';
-        return papyr.db(cname).watch(dataList => {
-            callback(dataList.map(data => new this(data)));
-        });
-    }
-}
-
-// Global exposure
-papyr.model = PapyrModel;
+    // Global exposure on the active kernel instance
+    papyr.model = PapyrModel;
+});
 
 
 // --- MODULE: core/auth.js ---
 /**
- * PAPER AUTHENTICATION ENGINE
+ * PAPYR AUTHENTICATION ENGINE
  * Handles login, logout, and registration logic. Provides a unified interface
  * for Local, JWT, Firebase Auth, and OAuth.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-papyr.auth = {
-    user: papyr.state(null), // Reactive current user state
-    
-    _config: { provider: 'local' },
-
-    init(config) {
-        this._config = { ...this._config, ...config };
+coreInitializers.push((papyr) => {
+    papyr.auth = {
+        user: papyr.state(null), // Reactive current user state
         
-        // Auto-login check for local token
-        if (this._config.provider === 'local') {
-            let token = papyr.storage.get("auth_token");
-            if (token) {
-                // Dummy restore for local mode
-                this.user.value = { token, username: 'LocalUser' };
+        _config: { provider: 'local' },
+
+        async _hashPassword(password) {
+            if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
+                const msgBuffer = new TextEncoder().encode(password);
+                const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             }
-        }
-    },
-
-    login(credentials) {
-        if (this._config.provider === 'local') {
-            // Simulated local login
-            let user = { id: Date.now(), ...credentials };
-            papyr.storage.set("auth_token", "fake_jwt_" + Date.now());
-            this.user.value = user;
-            return Promise.resolve(user);
-        } else if (this._config.provider === 'firebase') {
-            if (papyr.firebase && papyr.firebase.auth) {
-                return papyr.firebase.auth().signInWithEmailAndPassword(credentials.email, credentials.password)
-                    .then(res => {
-                        this.user.value = res.user;
-                        return res.user;
-                    });
-            } else {
-                return Promise.reject("Firebase not initialized");
+            // Deterministic numeric hashing fallback for Node.js/testing environments:
+            let hash = 0;
+            for (let i = 0; i < password.length; i++) {
+                const char = password.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
             }
-        }
-        return Promise.reject("Provider not supported");
-    },
+            return "sha256_poly_" + Math.abs(hash).toString(16);
+        },
 
-    register(credentials) {
-        if (this._config.provider === 'local') {
-            // Simulated local registration
-            let user = { id: Date.now(), ...credentials };
-            papyr.storage.set("auth_token", "fake_jwt_" + Date.now());
-            this.user.value = user;
-            return Promise.resolve(user);
-        }
-        return Promise.reject("Registration not implemented for " + this._config.provider);
-    },
+        init(config) {
+            this._config = { ...this._config, ...config };
+            
+            // Auto-login check for local token
+            if (this._config.provider === 'local') {
+                let token = papyr.storage.get("auth_token");
+                if (token) {
+                    let sessions = papyr.storage.get("papyr_auth_sessions") || {};
+                    let username = sessions[token];
+                    if (username) {
+                        let users = papyr.storage.get("papyr_auth_users") || {};
+                        let userRecord = users[username];
+                        if (userRecord) {
+                            this.user.value = { id: userRecord.id, username: username, token };
+                        } else {
+                            papyr.storage.set("auth_token", null);
+                        }
+                    } else {
+                        papyr.storage.set("auth_token", null);
+                    }
+                }
+            }
+        },
 
-    logout() {
-        if (this._config.provider === 'local') {
-            papyr.storage.set("auth_token", null);
-            this.user.value = null;
-            return Promise.resolve();
-        } else if (this._config.provider === 'firebase' && papyr.firebase) {
-            return papyr.firebase.auth().signOut().then(() => {
+        async login(credentials) {
+            if (this._config.provider === 'local') {
+                if (!credentials.username || !credentials.password) {
+                    return Promise.reject(new Error("Authentication failed: Username and password are required."));
+                }
+                let users = papyr.storage.get("papyr_auth_users") || {};
+                let userRecord = users[credentials.username];
+                if (!userRecord) {
+                    return Promise.reject(new Error("Authentication failed: Username does not exist."));
+                }
+                
+                const hashedPassword = await this._hashPassword(credentials.password);
+                if (userRecord.passwordHash !== hashedPassword) {
+                    return Promise.reject(new Error("Authentication failed: Incorrect password."));
+                }
+                
+                const token = "local_session_" + Math.random().toString(36).substr(2, 9);
+                let sessions = papyr.storage.get("papyr_auth_sessions") || {};
+                sessions[token] = credentials.username;
+                papyr.storage.set("papyr_auth_sessions", sessions);
+                
+                papyr.storage.set("auth_token", token);
+                let userObj = { id: userRecord.id, username: credentials.username, token };
+                this.user.value = userObj;
+                return userObj;
+            } else if (this._config.provider === 'firebase') {
+                if (papyr.firebase && papyr.firebase.auth) {
+                    return papyr.firebase.auth().signInWithEmailAndPassword(credentials.email, credentials.password)
+                        .then(res => {
+                            this.user.value = res.user;
+                            return res.user;
+                        });
+                } else {
+                    return Promise.reject(new Error("Firebase not initialized"));
+                }
+            }
+            return Promise.reject(new Error("Provider not supported"));
+        },
+
+        async register(credentials) {
+            if (this._config.provider === 'local') {
+                if (!credentials.username || !credentials.password) {
+                    return Promise.reject(new Error("Registration failed: Username and password are required."));
+                }
+                let users = papyr.storage.get("papyr_auth_users") || {};
+                if (users[credentials.username]) {
+                    return Promise.reject(new Error("Registration failed: Username already exists."));
+                }
+                
+                const hashedPassword = await this._hashPassword(credentials.password);
+                users[credentials.username] = {
+                    id: Date.now(),
+                    username: credentials.username,
+                    passwordHash: hashedPassword
+                };
+                papyr.storage.set("papyr_auth_users", users);
+                
+                const token = "local_session_" + Math.random().toString(36).substr(2, 9);
+                let sessions = papyr.storage.get("papyr_auth_sessions") || {};
+                sessions[token] = credentials.username;
+                papyr.storage.set("papyr_auth_sessions", sessions);
+                
+                papyr.storage.set("auth_token", token);
+                let userObj = { id: users[credentials.username].id, username: credentials.username, token };
+                this.user.value = userObj;
+                return userObj;
+            }
+            return Promise.reject(new Error("Registration not implemented for " + this._config.provider));
+        },
+
+        logout() {
+            if (this._config.provider === 'local') {
+                let token = papyr.storage.get("auth_token");
+                if (token) {
+                    let sessions = papyr.storage.get("papyr_auth_sessions") || {};
+                    delete sessions[token];
+                    papyr.storage.set("papyr_auth_sessions", sessions);
+                }
+                papyr.storage.set("auth_token", null);
                 this.user.value = null;
-            });
+                return Promise.resolve();
+            } else if (this._config.provider === 'firebase' && papyr.firebase) {
+                return papyr.firebase.auth().signOut().then(() => {
+                    this.user.value = null;
+                });
+            }
         }
-    }
-};
+    };
+});
 
 
 // --- MODULE: core/api.js ---
 /**
- * PAPER API HELPERS
+ * PAPYR API HELPERS
  * Simplifies standard fetch() commands for beginners.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
-(function() {
+
+coreInitializers.push((papyr) => {
     papyr.api = {
         /**
          * Perform an async GET request
@@ -1219,7 +1568,7 @@ papyr.auth = {
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                papyr.warn(`papyr.api.get failed for ${url}`, error);
+                if (papyr.warn) papyr.warn(`papyr.api.get failed for ${url}`, error);
                 throw error;
             }
         },
@@ -1241,20 +1590,22 @@ papyr.auth = {
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                papyr.warn(`papyr.api.post failed for ${url}`, error);
+                if (papyr.warn) papyr.warn(`papyr.api.post failed for ${url}`, error);
                 throw error;
             }
         }
     };
-})();
+});
 
 
 // --- MODULE: core/debug.js ---
 /**
- * PAPER DEBUGGING SUITE
+ * PAPYR DEBUGGING SUITE
  * Provides structured, educational console logs for beginners.
+ * Updated to run modularly inside the Papyr Kernel context and instantiate the default global instance.
  */
-(function() {
+
+coreInitializers.push((papyr) => {
     papyr.log = (...args) => {
         console.log(
             '%c Papyr Log ', 
@@ -1269,8 +1620,20 @@ papyr.auth = {
             'background: #f59e0b; color: white; border-radius: 4px; font-weight: bold; padding: 2px 4px;',
             ...args
         );
+        
+        // Report warnings to the kernel diagnostics engine
+        papyr.diagnostics.errors.push({
+            type: 'warning',
+            message: args.map(String).join(' '),
+            timestamp: new Date().toISOString()
+        });
     };
-})();
+});
+
+// Since debug.js is the last concatenated file in the build, instantiate the global window.papyr now!
+if (typeof window !== 'undefined' && !window.papyr) {
+    window.papyr = createPapyr();
+}
 
 
 
@@ -1868,7 +2231,7 @@ papyr.auth = {
     // ==========================================
     // 4. Pre-built Components
     // ==========================================
-    papyr.components = {
+    Object.assign(papyr.components, {
         navbar: (logo, links) => {
             let nav = papyr.nav('.navbar');
             let navLinks = papyr.div('.nav-links');
@@ -1981,21 +2344,257 @@ papyr.auth = {
                 current = (current + 1) % images.length;
                 updateCarousel();
             };
-            
             return container;
         }
-    };
+    });
 })();
+
+
+// --- MODULE: plugins/kernel-plugins.js ---
+/**
+ * PAPYR NATIVE KERNEL PLUGINS
+ * 
+ * Formal core plugins utilizing the kernel plugin lifecycle hooks:
+ * 1. papyr-intent-engine: Supports intent-based cinematic styling configs and spring-physics button builders.
+ * 2. papyr-self-heal: Spellchecks unknown HTML tags using Levenshtein distance, prints developer console warnings, and hooks global errors.
+ * 3. papyr-accessibility-adapter: Automatically injects appropriate ARIA roles and keyboard accessibility support (tabIndex).
+ * 4. papyr-energy-adapter: Links with the Papyr Power system to throttle animations and loop states during idle modes.
+ */
+
+(function(window) {
+    // Helper to calculate Levenshtein distance (for local self-heal fallback)
+    function levenshteinDistance(a, b) {
+        let tmp = [];
+        for (let i = 0; i <= a.length; i++) {
+            let row = [i];
+            for (let j = 1; j <= b.length; j++) {
+                row.push(i === 0 ? j : Math.min(
+                    tmp[i - 1][j] + 1,
+                    row[j - 1] + 1,
+                    tmp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+                ));
+            }
+            tmp.push(row);
+        }
+        return tmp[a.length][b.length];
+    }
+
+    // 1. Intent Engine Plugin
+    const intentEnginePlugin = {
+        name: 'papyr-intent-engine',
+        version: '1.0.0',
+        install(kernel) {
+            // Register cinematic configs and theme scaffolding styles
+            kernel.applyCinematic = (el, styleType) => {
+                if (!el || !el.style) return;
+                const configurations = {
+                    hero: {
+                        background: 'linear-gradient(135deg, #1e1b4b 0%, #311042 50%, #0f172a 100%)',
+                        color: '#f8fafc',
+                        padding: '120px 20px',
+                        textAlign: 'center',
+                        position: 'relative',
+                        overflow: 'hidden'
+                    },
+                    cinematic: {
+                        background: 'radial-gradient(circle at center, #1e293b 0%, #0f172a 100%)',
+                        color: '#38bdf8',
+                        padding: '80px 40px',
+                        border: '1px solid rgba(56, 189, 248, 0.2)',
+                        boxShadow: '0 0 40px rgba(56, 189, 248, 0.1)',
+                        borderRadius: '24px'
+                    },
+                    focus: {
+                        background: '#020617',
+                        color: '#f1f5f9',
+                        borderLeft: '4px solid #6366f1',
+                        padding: '24px',
+                        fontStyle: 'italic',
+                        borderRadius: '0 8px 8px 0'
+                    }
+                };
+                const styles = configurations[styleType];
+                if (styles) {
+                    Object.assign(el.style, styles);
+                }
+            };
+
+            // Dynamic spring physics-based button builder
+            kernel.button = (text, options = {}) => {
+                const isSecondary = options.variant === 'secondary';
+                
+                const btnStyle = {
+                    padding: '12px 24px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    border: isSecondary ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                    background: isSecondary ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                    color: '#ffffff',
+                    transition: 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, opacity 0.2s ease',
+                    boxShadow: isSecondary ? 'none' : '0 4px 12px rgba(99, 102, 241, 0.3)',
+                };
+
+                const userStyle = options.style || {};
+                const finalStyle = Object.assign({}, btnStyle, userStyle);
+
+                const btn = kernel('button', {
+                    style: finalStyle,
+                    class: options.class || '',
+                    on: {
+                        mouseenter() {
+                            btn.style.transform = 'scale(1.05)';
+                            if (!isSecondary) {
+                                btn.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.5)';
+                            }
+                        },
+                        mouseleave() {
+                            btn.style.transform = 'scale(1)';
+                            if (!isSecondary) {
+                                btn.style.boxShadow = '0 4px 12px rgba(99, 102, 241, 0.3)';
+                            }
+                        },
+                        mousedown() {
+                            btn.style.transform = 'scale(0.95)';
+                        },
+                        mouseup() {
+                            btn.style.transform = 'scale(1.05)';
+                        }
+                    }
+                }, text);
+
+                if (options.on && options.on.click) {
+                    btn.addEventListener('click', options.on.click);
+                }
+
+                return btn;
+            };
+        }
+    };
+
+    // 2. Self Heal Plugin
+    const selfHealPlugin = {
+        name: 'papyr-self-heal',
+        version: '1.0.0',
+        install(kernel) {
+            // Listen to warning events from the kernel
+            if (typeof window !== 'undefined') {
+                window.addEventListener('papyr-warning', (e) => {
+                    const { tag, suggestion } = e.detail;
+                    const logMsg = `💡 [Self Heal Plugin] Corrective suggestion for tag <${tag}>: Use <${suggestion}> instead.`;
+                    console.log(`%c ${logMsg} `, 'background: #10b981; color: white; border-radius: 4px; font-weight: bold; padding: 2px 4px;');
+                    
+                    // Push diagnostic info
+                    kernel.diagnostics.errors.push({
+                        type: 'self-heal-suggestion',
+                        message: `Spellchecked unknown tag <${tag}>. Corrective suggestion: <${suggestion}>`,
+                        timestamp: new Date().toISOString()
+                    });
+                });
+
+                // Global window error safety reporting
+                window.addEventListener('error', (e) => {
+                    kernel.diagnostics.reportError(e.error || e.message);
+                });
+            }
+        }
+    };
+
+    // 3. Accessibility Adapter Plugin
+    const accessibilityAdapterPlugin = {
+        name: 'papyr-accessibility-adapter',
+        version: '1.0.0',
+        hooks: {
+            onRender(el) {
+                if (!el || !el.tagName) return;
+                const tag = el.tagName.toLowerCase();
+
+                // 1. Add roles for button and links
+                if (tag === 'button') {
+                    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+                }
+                
+                // 2. Navigation containers
+                if (el.classList && (el.classList.contains('navbar') || el.classList.contains('nav'))) {
+                    if (!el.hasAttribute('role')) el.setAttribute('role', 'navigation');
+                }
+
+                // 3. Complementary sidebars
+                if (el.classList && (el.classList.contains('sidebar') || el.classList.contains('aside'))) {
+                    if (!el.hasAttribute('role')) el.setAttribute('role', 'complementary');
+                }
+
+                // 4. Ensure images have alt descriptions
+                if (tag === 'img') {
+                    if (!el.hasAttribute('alt')) {
+                        el.setAttribute('alt', ''); // Empty alt to hide aesthetic images from screen readers
+                    }
+                }
+
+                // 5. Interactive elements without standard focus
+                if (el.hasAttribute('onclick') || (el.dataset && el.dataset.clickEvent)) {
+                    if (tag !== 'button' && tag !== 'a' && tag !== 'input') {
+                        if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+                        if (!el.hasAttribute('tabindex')) el.setAttribute('tabindex', '0');
+                    }
+                }
+            }
+        }
+    };
+
+    // 4. Energy Adapter Plugin
+    const energyAdapterPlugin = {
+        name: 'papyr-energy-adapter',
+        version: '1.0.0',
+        install(kernel) {
+            // Integrate with kernel.power system to optimize execution pacing
+            kernel.events.on('power-state-change', (newState) => {
+                if (newState === 'idle') {
+                    console.log("⚡ [Energy Adapter] Reducing UI update loops to idle pace.");
+                } else if (newState === 'active') {
+                    console.log("⚡ [Energy Adapter] Elevating UI performance to full capacity.");
+                }
+            });
+
+            // Set up a loop listener to dynamically hook with papyr.power if it exists
+            setTimeout(() => {
+                if (kernel.power && kernel.power.state) {
+                    kernel.power.state.subscribe((stateVal) => {
+                        kernel.events.emit('power-state-change', stateVal);
+                    });
+                }
+            }, 100);
+        }
+    };
+
+    // Register all native plugins automatically if papyr library is loaded
+    if (typeof window !== 'undefined') {
+        window.papyrIntentEngine = intentEnginePlugin;
+        window.papyrSelfHeal = selfHealPlugin;
+        window.papyrAccessibilityAdapter = accessibilityAdapterPlugin;
+        window.papyrEnergyAdapter = energyAdapterPlugin;
+
+        // Auto-install to default global instance if present
+        if (window.papyr && window.papyr.use) {
+            window.papyr.use(intentEnginePlugin);
+            window.papyr.use(selfHealPlugin);
+            window.papyr.use(accessibilityAdapterPlugin);
+            window.papyr.use(energyAdapterPlugin);
+        }
+    }
+
+})(typeof window !== 'undefined' ? window : this);
 
 
 // --- MODULE: plugins/animate.js ---
 /**
  * PAPYR ANIMATE
  * Zero-dependency hardware-accelerated animation engine.
+ * v2.0 - Agile Cinematic Motion, Spring systems, and Swipe gestures.
  */
 (function() {
-    // Styles are bundled natively via build.js into papyr-complete-styles
-
     const prefersReducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
     // Intersection Observer for scroll animations
@@ -2024,72 +2623,251 @@ papyr.auth = {
         }, { threshold: 0.1 });
     }
 
-    // Override papyr-core.js to intercept 'animate' attribute
-    const originalPapyr = window.papyr;
-    if (originalPapyr) {
-        // We will monkey-patch the original papyr function or use a plugin hook
-        // Since papyr is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
-        // Actually, the easiest way is to add a hook in papyr-core.js. 
-        // But to keep it self-contained, we can observe the DOM for [data-animate] or [animate].
-        // Alternatively, since papyr-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
-        
-        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop', 'fade-in', 'slide-up', 'slide-down', 'zoom-in', 'blur-in'];
-        const levenshtein = (a, b) => {
-            const matrix = [];
-            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-            for (let i = 1; i <= b.length; i++) {
-                for (let j = 1; j <= a.length; j++) {
-                    if (b.charAt(i - 1) == a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-                    else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
-                }
+    const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop', 'fade-in', 'slide-up', 'slide-down', 'zoom-in', 'blur-in'];
+    const levenshtein = (a, b) => {
+        const matrix = [];
+        for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+        for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= b.length; i++) {
+            for (let j = 1; j <= a.length; j++) {
+                if (b.charAt(i - 1) == a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
             }
-            return matrix[b.length][a.length];
-        };
+        }
+        return matrix[b.length][a.length];
+    };
 
-        let mo = new MutationObserver(mutations => {
-            if (prefersReducedMotion) return;
-            mutations.forEach(m => {
-                m.addedNodes.forEach(node => {
-                    if (node instanceof Element) {
-                        let elements = [node, ...node.querySelectorAll('[animate]')];
-                        elements.forEach(el => {
-                            if (el.hasAttribute('animate') && observer) {
-                                let animType = el.getAttribute('animate');
+    let mo = new MutationObserver(mutations => {
+        if (prefersReducedMotion) return;
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node instanceof Element) {
+                    let elements = [node, ...node.querySelectorAll('[animate]')];
+                    elements.forEach(el => {
+                        if (el.hasAttribute('animate') && observer) {
+                            let animType = el.getAttribute('animate');
 
-                                // Spell check animation
-                                if (!VALID_ANIMATIONS.includes(animType)) {
-                                    let closest = '';
-                                    let minDistance = Infinity;
-                                    for (let valid of VALID_ANIMATIONS) {
-                                        let d = levenshtein(animType, valid);
-                                        if (d < minDistance) {
-                                            minDistance = d;
-                                            closest = valid;
-                                        }
-                                    }
-                                    if (minDistance <= 3) {
-                                        console.error(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`);
-                                        if (papyr.toast) papyr.toast(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`, 'error');
+                            // Spell check animation
+                            if (!VALID_ANIMATIONS.includes(animType)) {
+                                let closest = '';
+                                let minDistance = Infinity;
+                                for (let valid of VALID_ANIMATIONS) {
+                                    let d = levenshtein(animType, valid);
+                                    if (d < minDistance) {
+                                        minDistance = d;
+                                        closest = valid;
                                     }
                                 }
-
-                                el.dataset.animate = animType;
-                                el.removeAttribute('animate'); // Clean DOM
-                                el.classList.add('papyr-animate-base');
-                                observer.observe(el);
+                                if (minDistance <= 3) {
+                                    console.error(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`);
+                                    if (papyr.toast) papyr.toast(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`, 'error');
+                                }
                             }
-                        });
-                    }
-                });
+
+                            el.dataset.animate = animType;
+                            el.removeAttribute('animate'); // Clean DOM
+                            el.classList.add('papyr-animate-base');
+                            observer.observe(el);
+                        }
+                    });
+                }
             });
         });
-        
-        if (typeof document !== 'undefined') {
-            mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
-        }
+    });
+    
+    if (typeof document !== 'undefined') {
+        mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
-})();
+
+    // --- MODULE: MOTION API ---
+
+    /**
+     * Unified animation entry point.
+     * Supports papyr.animate(el, properties, duration)
+     * and decorator configuration papyr.animate({ type: 'glass-pop' })
+     */
+    const originalAnimate = papyr.animate;
+    papyr.animate = (elOrConfig, properties, duration = 400) => {
+        if (!elOrConfig) return null;
+
+        // Config-first mode: papyr.animate({ type: 'glass-pop' })
+        if (typeof elOrConfig === 'object' && !(elOrConfig instanceof Element)) {
+            const config = elOrConfig;
+            return (el) => {
+                if (!el) return el;
+                if (config.type === 'glass-pop') {
+                    el.classList.add('animate-glass-pop');
+                    el.classList.add('papyr-animate-base');
+                }
+                return el;
+            };
+        }
+
+        // Direct DOM mode
+        const el = elOrConfig;
+        if (properties && typeof properties === 'object') {
+            el.style.transition = `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+            requestAnimationFrame(() => {
+                Object.assign(el.style, properties);
+            });
+            return el;
+        }
+
+        return el;
+    };
+
+    // Cinematic transition wrappers
+    papyr.animate.fade = (el, duration = 600) => {
+        if (!el) return el;
+        el.style.opacity = '0';
+        el.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+            });
+        });
+        return el;
+    };
+
+    papyr.animate.slide = (el, duration = 600) => {
+        if (!el) return el;
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(30px)';
+        el.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1.15)`;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0px)';
+            });
+        });
+        return el;
+    };
+
+    papyr.animate.zoom = (el, duration = 600) => {
+        if (!el) return el;
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.9)';
+        el.style.transition = `opacity ${duration}ms cubic-bezier(0.4, 0, 0.2, 1), transform ${duration}ms cubic-bezier(0.4, 0, 0.2, 1.15)`;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'scale(1)';
+            });
+        });
+        return el;
+    };
+
+    papyr.animate.pop = (el, duration = 600) => {
+        if (!el) return el;
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.3)';
+        el.style.transition = `opacity ${duration}ms ease, transform ${duration}ms cubic-bezier(0.34, 1.56, 0.64, 1)`;
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'scale(1)';
+            });
+        });
+        return el;
+    };
+
+    // Spring physics animator solver
+    papyr.animate.spring = (el, properties, config = {}) => {
+        if (!el || typeof window === 'undefined') return el;
+        const { tension = 170, friction = 26, mass = 1 } = config;
+        
+        const anims = {};
+        Object.entries(properties).forEach(([prop, targetVal]) => {
+            let currentVal = parseFloat(el.style[prop]) || 0;
+            anims[prop] = {
+                current: currentVal,
+                velocity: 0,
+                target: targetVal
+            };
+        });
+
+        const step = () => {
+            let done = true;
+            Object.entries(anims).forEach(([prop, anim]) => {
+                let force = -tension * (anim.current - anim.target) - friction * anim.velocity;
+                let acceleration = force / mass;
+                anim.velocity += acceleration * 0.016; // dt = 16ms
+                anim.current += anim.velocity * 0.016;
+
+                if (Math.abs(anim.velocity) > 0.01 || Math.abs(anim.current - anim.target) > 0.01) {
+                    done = false;
+                } else {
+                    anim.current = anim.target;
+                }
+
+                if (prop === 'scale') {
+                    el.style.transform = `scale(${anim.current})`;
+                } else if (['x', 'y'].includes(prop)) {
+                    el.style.transform = `translate${prop.toUpperCase()}(${anim.current}px)`;
+                } else {
+                    el.style[prop] = prop === 'opacity' ? anim.current : `${anim.current}px`;
+                }
+            });
+
+            if (!done) {
+                requestAnimationFrame(step);
+            }
+        };
+
+        step();
+        return el;
+    };
+
+    // Gesture swipe controls and dynamic touch trackers
+    papyr.animate.gesture = (el, options = {}) => {
+        if (!el || typeof window === 'undefined') return el;
+        const { onSwipeLeft, onSwipeRight, onDrag } = options;
+        let startX = 0, startY = 0, currentX = 0, currentY = 0;
+        let isDragging = false;
+
+        const start = (clientX, clientY) => {
+            startX = clientX;
+            startY = clientY;
+            isDragging = true;
+            el.style.transition = 'none';
+        };
+
+        const move = (clientX, clientY) => {
+            if (!isDragging) return;
+            currentX = clientX - startX;
+            currentY = clientY - startY;
+            if (onDrag) onDrag(currentX, currentY, el);
+            else {
+                el.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            }
+        };
+
+        const end = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            el.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            
+            if (currentX > 100 && onSwipeRight) {
+                onSwipeRight(el);
+            } else if (currentX < -100 && onSwipeLeft) {
+                onSwipeLeft(el);
+            } else {
+                el.style.transform = 'translate(0px, 0px)';
+            }
+            currentX = 0;
+            currentY = 0;
+        };
+
+        el.addEventListener('mousedown', (e) => start(e.clientX, e.clientY));
+        window.addEventListener('mousemove', (e) => move(e.clientX, e.clientY));
+        window.addEventListener('mouseup', end);
+
+        el.addEventListener('touchstart', (e) => start(e.touches[0].clientX, e.touches[0].clientY));
+        el.addEventListener('touchmove', (e) => move(e.touches[0].clientX, e.touches[0].clientY));
+        el.addEventListener('touchend', end);
+
+        return el;
+    };
 
     // PAPER PARALLAX ENGINE
     papyr.parallax = (selector, speed = 0.5) => {
@@ -2119,14 +2897,12 @@ papyr.auth = {
                     vy += gravity;
                     y += vy;
                     
-                    // Simple floor collision bounds based on parent
                     let parentHeight = el.parentElement ? el.parentElement.clientHeight : window.innerHeight;
                     let floor = parentHeight - el.offsetHeight;
                     
                     if (y > floor) {
                         y = floor;
                         vy *= -bounce;
-                        // Apply friction on bounce
                         vy *= friction;
                     }
                     
@@ -2135,7 +2911,6 @@ papyr.auth = {
                 animationFrame = requestAnimationFrame(update);
             };
             
-            // Allow drag to drop
             el.style.cursor = 'grab';
             el.addEventListener('mousedown', () => {
                 isDragging = true;
@@ -2145,7 +2920,7 @@ papyr.auth = {
                 if (isDragging) {
                     isDragging = false;
                     el.style.cursor = 'grab';
-                    vy = 0; // Reset velocity on drop
+                    vy = 0;
                 }
             });
             window.addEventListener('mousemove', (e) => {
@@ -2155,7 +2930,6 @@ papyr.auth = {
                 }
             });
 
-            // Start loop on next tick to allow DOM mount
             setTimeout(() => {
                 let initialBounds = el.getBoundingClientRect();
                 y = initialBounds.top || 0;
@@ -2166,10 +2940,12 @@ papyr.auth = {
         };
     };
 
+})();
+
 
 // --- MODULE: plugins/charts.js ---
 /**
- * PAPER CHARTS
+ * PAPYR CHARTS
  * Zero-dependency HTML5 Canvas charting plugin.
  */
 (function() {
@@ -2318,7 +3094,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/browser-api.js ---
 /**
- * PAPER NATIVE BROWSER APIs
+ * PAPYR NATIVE BROWSER APIs
  * Simplifies access to native device hardware and browser APIs.
  */
 (function() {
@@ -2389,7 +3165,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/pwa.js ---
 /**
- * PAPER PWA ENGINE
+ * PAPYR PWA ENGINE
  * One-line registration for Progressive Web App Service Workers.
  */
 (function() {
@@ -2412,7 +3188,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/design.js ---
 /**
- * PAPER DESIGN ENGINE
+ * PAPYR DESIGN ENGINE
  * Advanced, responsive layout and aesthetic helpers.
  */
 (function() {
@@ -2453,9 +3229,139 @@ papyr.auth = {
 })();
 
 
+// --- MODULE: plugins/power.js ---
+/**
+ * PAPYR POWER SYSTEM
+ * Energy-Aware, Performance-First state management and rendering throttler.
+ * Coordinates user interaction states, page visibility, and loop pacing natively.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading power plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // 1. Setup reactive power states
+    const powerState = papyr.state('active'); // 'active', 'idle', 'suspended'
+    const powerFps = papyr.state(60);         // Reactive FPS diagnostic
+
+    let idleTimeout = null;
+    const IDLE_DELAY_MS = 10000;              // 10 seconds to trigger idle throttling
+
+    // 2. Activity monitor triggers
+    const resetIdleTimer = () => {
+        if (powerState.value === 'suspended') return; // Do not wake up if tab is backgrounded
+        
+        if (powerState.value !== 'active') {
+            powerState.value = 'active';
+            powerFps.value = 60;
+        }
+
+        if (idleTimeout) clearTimeout(idleTimeout);
+        idleTimeout = setTimeout(() => {
+            if (powerState.value === 'active') {
+                powerState.value = 'idle';
+                powerFps.value = 10;
+            }
+        }, IDLE_DELAY_MS);
+    };
+
+    // 3. Mount global event listeners safely (with passive: true to prevent frame drops)
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+        const events = ['mousemove', 'mousedown', 'touchstart', 'keydown', 'scroll'];
+        events.forEach(evt => {
+            window.addEventListener(evt, resetIdleTimer, { passive: true });
+        });
+
+        // Background / Visibility change listeners
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                powerState.value = 'suspended';
+                powerFps.value = 0;
+                if (idleTimeout) clearTimeout(idleTimeout);
+            } else {
+                resetIdleTimer();
+            }
+        });
+
+        // Initialize first idle timer
+        resetIdleTimer();
+    }
+
+    // 4. Power Engine API Exports
+    papyr.power = {
+        state: powerState,
+        fps: powerFps,
+        
+        /**
+         * Reset the idle timer manually (e.g. during custom script interactions)
+         */
+        activity() {
+            resetIdleTimer();
+        },
+
+        /**
+         * Wraps an animation loop or heavy computation function.
+         * Automatically throttles pacing to conserve CPU, RAM, and battery.
+         * 
+         * @param {function} callback Rendering loop callback to execute
+         * @returns {function} Cleanup hook to completely unsubscribe the loop
+         */
+        throttle(callback) {
+            let active = true;
+            
+            const tick = () => {
+                if (!active) return;
+
+                const currentState = powerState.value;
+                if (currentState === 'suspended') {
+                    // Suspended completely. Return and wait for visibility change to re-trigger.
+                    return;
+                }
+
+                if (currentState === 'idle') {
+                    // Idle state: Throttle to ~10 FPS (100ms pacing)
+                    setTimeout(() => {
+                        if (active && powerState.value === 'idle') {
+                            callback();
+                            requestAnimationFrame(tick);
+                        } else if (active) {
+                            requestAnimationFrame(tick);
+                        }
+                    }, 100);
+                    return;
+                }
+
+                // Active state: Full 60 FPS standard pacing
+                callback();
+                requestAnimationFrame(tick);
+            };
+
+            // Re-trigger loop if transitioning from suspended/idle to active
+            const unsubscribe = powerState.subscribe((state) => {
+                if (state === 'active' && active) {
+                    requestAnimationFrame(tick);
+                }
+            });
+
+            // Start loop execution
+            requestAnimationFrame(tick);
+
+            // Return unsubscribe cleanup hook
+            return () => {
+                active = false;
+                unsubscribe();
+            };
+        }
+    };
+})(typeof window !== 'undefined' ? window : this);
+
+
 // --- MODULE: plugins/particles.js ---
 /**
- * PAPER PARTICLES ENGINE
+ * PAPYR PARTICLES ENGINE
  * High-performance, zero-dependency HTML5 Canvas Particle System.
  */
 (function() {
@@ -2510,7 +3416,6 @@ papyr.auth = {
             }
             ctx.fill();
             update();
-            requestAnimationFrame(render);
         };
 
         const update = () => {
@@ -2532,12 +3437,23 @@ papyr.auth = {
             }
         };
 
+        let stopThrottle = null;
+
         // Mount hook
         setTimeout(() => {
             resize();
             initParticles();
             window.addEventListener('resize', () => { resize(); initParticles(); });
-            render();
+            
+            if (papyr.power && typeof papyr.power.throttle === 'function') {
+                stopThrottle = papyr.power.throttle(render);
+            } else {
+                const legacyLoop = () => {
+                    render();
+                    requestAnimationFrame(legacyLoop);
+                };
+                requestAnimationFrame(legacyLoop);
+            }
         }, 50);
 
         return canvas;
@@ -2547,7 +3463,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/ui-components.js ---
 /**
- * PAPER UI COMPONENTS
+ * PAPYR UI COMPONENTS
  * Cinematic, interactive UI elements (Toasts, Modals, Sheets).
  */
 (function() {
@@ -2918,10 +3834,28 @@ papyr.auth = {
 
 // --- MODULE: plugins/layout.js ---
 /**
- * PAPER LAYOUT ENGINE
+ * PAPYR LAYOUT ENGINE
  * Structural layout orchestration and zero-conflict responsive workspace management.
+ * v2.0 - Collapsible glass sidebars, adaptive layout intelligence, and foldable display panels.
  */
 (function() {
+    // Glassmorphism panel helper
+    papyr.glass = (...args) => {
+        return papyr.div({ 
+            class: 'papyr-glass-panel',
+            style: { 
+                background: 'rgba(255, 255, 255, 0.04)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.35)',
+                borderRadius: '16px',
+                padding: '20px',
+                color: '#f8fafc'
+            } 
+        }, ...args);
+    };
+
     papyr.layout = {
         /**
          * Responsive Flex Container
@@ -2973,67 +3907,2480 @@ papyr.auth = {
         },
 
         /**
-         * Semantic Semantic Wrappers
+         * Semantic Row / Col flex wraps
          */
         row(...children) { return this.flex({ direction: 'row' }, ...children); },
         col(...children) { return this.flex({ direction: 'column' }, ...children); },
 
         /**
+         * Foldable dual-screen screen layout adapter.
+         * Auto-splits layout if a fold viewport is detected.
+         */
+        foldable(options = {}, ...children) {
+            const isFolded = typeof window !== 'undefined' && (
+                window.matchMedia('(spanning: single-fold-vertical)').matches || 
+                window.matchMedia('(spanning: single-fold-horizontal)').matches ||
+                window.innerWidth < 900 // Fallback breakpoint for fold simulation
+            );
+
+            let config = Object.assign({
+                gap: '24px'
+            }, options);
+
+            return papyr.div({
+                class: 'papyr-foldable-layout',
+                style: {
+                    display: 'grid',
+                    gridTemplateColumns: isFolded ? '1fr' : '1fr 1fr',
+                    gap: config.gap,
+                    width: '100%'
+                }
+            }, ...children);
+        },
+
+        /**
          * Persistent App Shell / Dashboard Template
+         * Supports collapsible sidebars, mobile headers, and custom theme overrides.
          */
         dashboard(options = {}) {
             const { 
                 sidebar = null, 
                 header = null, 
                 main = null, 
-                footer = null 
+                footer = null,
+                sidebarWidth = '250px',
+                headerHeight = '64px'
             } = options;
 
-            // Using semantic tags with dedicated layout classes for router parsing
+            // Reactive state to control menu toggle on mobile viewport sizes
+            const sidebarOpen = papyr.state(true);
+
             let shell = papyr.div({
                 class: 'papyr-app-shell',
                 style: {
                     display: 'grid',
-                    gridTemplateColumns: sidebar ? 'var(--papyr-sidebar-width, 250px) 1fr' : '1fr',
-                    gridTemplateRows: header ? 'var(--papyr-header-height, 60px) 1fr auto' : '1fr auto',
+                    gridTemplateColumns: sidebar ? `${sidebarWidth} 1fr` : '1fr',
+                    gridTemplateRows: header ? `${headerHeight} 1fr auto` : '1fr auto',
                     minHeight: '100vh',
-                    width: '100%'
+                    width: '100%',
+                    background: '#070913'
                 }
             });
 
-            // Media Query CSS logic injected if needed, but handled by inline overrides via media queries
+            // Auto-collapse sidebar listener on load for mobile viewports
+            if (typeof window !== 'undefined') {
+                const checkScreenSize = () => {
+                    if (window.innerWidth < 768) {
+                        sidebarOpen.value = false;
+                    } else {
+                        sidebarOpen.value = true;
+                    }
+                };
+                window.addEventListener('resize', checkScreenSize);
+                // Run on tick to let element mount
+                setTimeout(checkScreenSize, 10);
+            }
+
             if (header) {
-                shell.appendChild(papyr.el('header', { 
+                // Header gets a menu toggle button for responsive sidebar collapse
+                const menuToggleButton = papyr.button('.menu-toggle', {
+                    style: {
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'white',
+                        fontSize: '1.5rem',
+                        cursor: 'pointer',
+                        padding: '10px',
+                        display: sidebar ? 'inline-block' : 'none'
+                    },
+                    onclick: () => {
+                        sidebarOpen.value = !sidebarOpen.value;
+                    }
+                }, '☰');
+
+                shell.appendChild(papyr('header', { 
                     class: 'papyr-shell-header',
-                    style: { gridColumn: sidebar ? '1 / -1' : '1', background: 'var(--papyr-surface, #ffffff)', borderBottom: '1px solid var(--papyr-border, #e2e8f0)' }
-                }, header));
+                    style: { 
+                        gridColumn: '1 / -1', 
+                        background: 'rgba(16, 22, 42, 0.8)', 
+                        backdropFilter: 'blur(12px)',
+                        borderBottom: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 20px',
+                        gap: '15px',
+                        zIndex: 10
+                    }
+                }, menuToggleButton, header));
             }
 
             if (sidebar) {
-                shell.appendChild(papyr.el('aside', {
+                const asideContainer = papyr('aside', {
                     class: 'papyr-shell-sidebar',
-                    style: { gridRow: header ? '2 / -1' : '1 / -1', background: 'var(--papyr-surface, #f8fafc)', borderRight: '1px solid var(--papyr-border, #e2e8f0)', overflowY: 'auto' }
-                }, sidebar));
+                    style: () => ({
+                        gridRow: header ? '2 / -1' : '1 / -1',
+                        background: 'rgba(11, 16, 36, 0.95)',
+                        borderRight: '1px solid rgba(255,255,255,0.08)',
+                        overflowY: 'auto',
+                        width: sidebarOpen.value ? sidebarWidth : '0px',
+                        minWidth: sidebarOpen.value ? sidebarWidth : '0px',
+                        opacity: sidebarOpen.value ? 1 : 0,
+                        pointerEvents: sidebarOpen.value ? 'auto' : 'none',
+                        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s'
+                    })
+                }, sidebar);
+
+                shell.appendChild(asideContainer);
             }
 
-            // This is the golden persistent marker: <main class="papyr-main-content">
-            // The router will target this instead of #app.
-            shell.appendChild(papyr.el('main', {
+            // Main routing and component projection area
+            shell.appendChild(papyr('main', {
                 class: 'papyr-main-content',
-                style: { padding: 'var(--papyr-main-padding, 24px)', overflowY: 'auto' }
+                style: { 
+                    padding: '24px', 
+                    overflowY: 'auto',
+                    position: 'relative',
+                    zIndex: 1
+                }
             }, main || papyr.div("Main Content Area")));
 
             if (footer) {
-                shell.appendChild(papyr.el('footer', {
+                shell.appendChild(papyr('footer', {
                     class: 'papyr-shell-footer',
-                    style: { gridColumn: sidebar ? '2 / -1' : '1', background: 'var(--papyr-surface, #ffffff)', borderTop: '1px solid var(--papyr-border, #e2e8f0)' }
+                    style: { 
+                        gridColumn: sidebar ? '2 / -1' : '1', 
+                        background: 'rgba(16, 22, 42, 0.8)', 
+                        borderTop: '1px solid rgba(255,255,255,0.08)',
+                        padding: '12px 20px'
+                    }
                 }, footer));
             }
 
             return shell;
+        },
+
+        /**
+         * Cinematic centered Hero Section template
+         * Extremely human-centered and beginner friendly: scaffolds titles, descriptions, action lists, and glass backings instantly.
+         */
+        hero(options = {}) {
+            const {
+                title = "Cinematic Experience",
+                subtitle = "Crafted beautifully with high performance reactivity",
+                actions = [],
+                theme = 'primary',
+                glass = true,
+                padding = '80px 40px'
+            } = options;
+
+            const primaryColor = theme === 'teal' ? '#14b8a6' : '#6366f1';
+            const secondaryColor = theme === 'teal' ? '#0d9488' : '#4f46e5';
+
+            let heroContent = papyr.flex.col({
+                align: 'center',
+                style: {
+                    textAlign: 'center',
+                    maxWidth: '800px',
+                    gap: '20px',
+                    zIndex: 2,
+                    position: 'relative'
+                }
+            },
+                papyr.h1(title, {
+                    style: {
+                        fontSize: 'var(--papyr-hero-title-size, 3.5rem)',
+                        fontWeight: '800',
+                        color: 'white',
+                        margin: 0,
+                        lineHeight: '1.1',
+                        letterSpacing: '-0.025em',
+                        background: `linear-gradient(135deg, #ffffff 30%, ${primaryColor} 100%)`,
+                        webkitBackgroundClip: 'text',
+                        webkitTextFillColor: 'transparent',
+                        textFillColor: 'transparent'
+                    }
+                }),
+                papyr.p(subtitle, {
+                    style: {
+                        fontSize: '1.25rem',
+                        color: '#94a3b8',
+                        margin: 0,
+                        lineHeight: '1.6',
+                        maxWidth: '600px'
+                    }
+                })
+            );
+
+            if (actions && actions.length > 0) {
+                let actionRow = papyr.flex.row({
+                    justify: 'center',
+                    gap: '12px',
+                    style: { marginTop: '10px' }
+                });
+                actions.forEach(action => {
+                    if (action instanceof Element) {
+                        actionRow.appendChild(action);
+                    } else if (typeof action === 'object') {
+                        let btn = papyr.button(action.text || 'Action', Object.assign({
+                            style: Object.assign({
+                                background: action.primary ? `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` : 'rgba(255,255,255,0.06)',
+                                border: action.primary ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                color: 'white',
+                                padding: '12px 24px',
+                                borderRadius: '8px',
+                                fontSize: '0.95rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                transition: 'all 0.25s',
+                                boxShadow: action.primary ? `0 4px 15px ${primaryColor}40` : 'none'
+                            }, action.style || {})
+                        }, action.attrs || {}));
+                        actionRow.appendChild(btn);
+                    }
+                });
+                heroContent.appendChild(actionRow);
+            }
+
+            let containerStyle = {
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: padding,
+                width: '100%',
+                position: 'relative',
+                overflow: 'hidden',
+                borderRadius: '16px'
+            };
+
+            if (glass) {
+                return papyr.div({
+                    class: 'papyr-hero-glass',
+                    style: Object.assign(containerStyle, {
+                        background: 'rgba(10, 15, 30, 0.4)',
+                        backdropFilter: 'blur(20px)',
+                        webkitBackdropFilter: 'blur(20px)',
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.5)'
+                    })
+                }, heroContent);
+            }
+
+            return papyr.div({ style: containerStyle }, heroContent);
         }
     };
 })();
+
+
+// --- MODULE: plugins/immersive.js ---
+/**
+ * PAPYR 3D / IMMERSIVE ENGINE
+ * High-performance, zero-dependency cinematic three-dimensional scene orchestration.
+ * v2.0 - Intelligent Three.js bindings, parallax depth, and Canvas2D holographic fallbacks.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading papyr-plugins.");
+        return;
+    }
+
+    const papyr3d = {
+        /**
+         * Orchestrates an immersive 3D/holographic backdrop.
+         * Detects Three.js globally, otherwise boots a gorgeous, pointer-aware fallback particle environment.
+         */
+        scene(options = {}, ...children) {
+            const config = Object.assign({
+                environment: 'space', // 'space', 'cyberpunk', 'underwater'
+                particles: true,
+                depth: true,
+                overlay: null
+            }, options);
+
+            const container = papyr.div('.papyr-3d-container', {
+                style: {
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '400px',
+                    overflow: 'hidden',
+                    background: '#04060d',
+                    borderRadius: '16px'
+                }
+            });
+
+            // Create Canvas element
+            const canvas = document.createElement('canvas');
+            canvas.style.position = 'absolute';
+            canvas.style.top = '0';
+            canvas.style.left = '0';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            canvas.style.zIndex = '0';
+            canvas.style.pointerEvents = 'none';
+            container.appendChild(canvas);
+
+            // Mount child overlay elements
+            if (config.overlay) {
+                const overlayWrapper = papyr.div('.papyr-3d-overlay', {
+                    style: {
+                        position: 'relative',
+                        zIndex: '2',
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        padding: '24px',
+                        pointerEvents: 'auto'
+                    }
+                }, config.overlay);
+                container.appendChild(overlayWrapper);
+            }
+
+            // Append any additional children inside the container
+            children.forEach(child => {
+                if (child) {
+                    if (child instanceof Element) {
+                        child.style.position = 'relative';
+                        child.style.zIndex = '2';
+                    }
+                    container.appendChild(child);
+                }
+            });
+
+            // Boot renderers after mount paint
+            setTimeout(() => {
+                const w = container.clientWidth || window.innerWidth;
+                const h = container.clientHeight || window.innerHeight;
+                canvas.width = w;
+                canvas.height = h;
+
+                if (window.THREE) {
+                    bootThreeJS(canvas, config);
+                } else {
+                    bootFallbackCanvas(canvas, config);
+                }
+            }, 50);
+
+            return container;
+        }
+    };
+
+    // Helper: Smart Three.js WebGL Orchestrator
+    function bootThreeJS(canvas, config) {
+        try {
+            const w = canvas.width;
+            const h = canvas.height;
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            camera.position.z = 5;
+
+            // Load environments using lights and particles
+            let particlesGeometry;
+            if (config.particles) {
+                particlesGeometry = new THREE.BufferGeometry();
+                const particlesCount = config.environment === 'cyberpunk' ? 400 : 800;
+                const posArray = new Float32Array(particlesCount * 3);
+
+                for (let i = 0; i < particlesCount * 3; i++) {
+                    posArray[i] = (Math.random() - 0.5) * 10;
+                }
+
+                particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+
+                let particleColor = '#ffffff';
+                if (config.environment === 'cyberpunk') particleColor = '#ff007f';
+                if (config.environment === 'underwater') particleColor = '#00f0ff';
+
+                const material = new THREE.PointsMaterial({
+                    size: 0.02,
+                    color: particleColor,
+                    transparent: true,
+                    opacity: 0.8
+                });
+
+                const particlesMesh = new THREE.Points(particlesGeometry, material);
+                scene.add(particlesMesh);
+            }
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0x6366f1, 2);
+            pointLight.position.set(2, 3, 4);
+            scene.add(pointLight);
+
+            // Motion tracker
+            let mouseX = 0, mouseY = 0;
+            if (config.depth) {
+                window.addEventListener('mousemove', (e) => {
+                    mouseX = (e.clientX / window.innerWidth) - 0.5;
+                    mouseY = (e.clientY / window.innerHeight) - 0.5;
+                });
+            }
+
+            const clock = new THREE.Clock();
+            const tick = () => {
+                const elapsedTime = clock.getElapsedTime();
+
+                // Rotate particles mesh based on environment
+                if (scene.children[1]) {
+                    scene.children[1].rotation.y = elapsedTime * 0.05;
+                    if (config.environment === 'underwater') {
+                        scene.children[1].rotation.x = Math.sin(elapsedTime * 0.2) * 0.1;
+                    }
+                }
+
+                // Smooth camera depth panning
+                if (config.depth) {
+                    camera.position.x += (mouseX * 2 - camera.position.x) * 0.05;
+                    camera.position.y += (-mouseY * 2 - camera.position.y) * 0.05;
+                    camera.lookAt(scene.position);
+                }
+
+                renderer.render(scene, camera);
+                requestAnimationFrame(tick);
+            };
+            tick();
+
+            // Resize support
+            window.addEventListener('resize', () => {
+                const parent = canvas.parentElement;
+                const newW = parent.clientWidth;
+                const newH = parent.clientHeight;
+                canvas.width = newW;
+                canvas.height = newH;
+                camera.aspect = newW / newH;
+                camera.updateProjectionMatrix();
+                renderer.setSize(newW, newH);
+            });
+        } catch (e) {
+            console.warn("Three.js WebGL context initialization failed, falling back to Canvas2D.", e);
+            bootFallbackCanvas(canvas, config);
+        }
+    }
+
+    // Helper: Ultra-Premium Canvas2D Dynamic Perspective Engine
+    function bootFallbackCanvas(canvas, config) {
+        const ctx = canvas.getContext('2d');
+        let w = canvas.width;
+        let h = canvas.height;
+        let particles = [];
+        let mouseX = 0, mouseY = 0;
+        let currentMouseX = 0, currentMouseY = 0;
+
+        // Trace pointer coordinates for micro-smooth inertia panning depth
+        if (config.depth) {
+            window.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) - 0.5;
+                mouseY = (e.clientY / window.innerHeight) - 0.5;
+            });
+        }
+
+        // Initialize particles based on environment configuration
+        const count = config.environment === 'cyberpunk' ? 120 : 250;
+        
+        const initParticles = () => {
+            particles = [];
+            for (let i = 0; i < count; i++) {
+                if (config.environment === 'space') {
+                    // Space: 3D coordinates (x, y, z) for realistic perspective starfield warp
+                    particles.push({
+                        x: (Math.random() - 0.5) * w * 2,
+                        y: (Math.random() - 0.5) * h * 2,
+                        z: Math.random() * w, // depth parameter
+                        r: Math.random() * 1.5 + 0.5,
+                        color: `rgba(255, 255, 255, ${Math.random() * 0.4 + 0.5})`
+                    });
+                } else if (config.environment === 'cyberpunk') {
+                    // Cyberpunk: Sparks floating up, code blocks, grid coordinate nodes
+                    particles.push({
+                        x: Math.random() * w,
+                        y: Math.random() * h,
+                        vy: -(Math.random() * 1.2 + 0.3),
+                        vx: (Math.random() - 0.5) * 0.4,
+                        r: Math.random() * 2 + 1,
+                        color: Math.random() > 0.4 ? 'rgba(255, 0, 127, 0.7)' : 'rgba(0, 240, 255, 0.7)',
+                        sparkle: Math.random() > 0.7
+                    });
+                } else {
+                    // Underwater: Bubbles floating upwards with smooth horizontal sine waves
+                    particles.push({
+                        x: Math.random() * w,
+                        y: h + Math.random() * 100,
+                        vy: -(Math.random() * 0.8 + 0.4),
+                        amplitude: Math.random() * 1.5 + 0.5,
+                        frequency: Math.random() * 0.02 + 0.005,
+                        phase: Math.random() * Math.PI * 2,
+                        r: Math.random() * 3 + 1,
+                        opacity: Math.random() * 0.4 + 0.2
+                    });
+                }
+            }
+        };
+        initParticles();
+
+        // 3D holographic rendering loop
+        const draw = () => {
+            ctx.clearRect(0, 0, w, h);
+
+            // Interpolate pointer displacement smoothly for camera lag
+            currentMouseX += (mouseX - currentMouseX) * 0.05;
+            currentMouseY += (mouseY - currentMouseY) * 0.05;
+
+            const camX = currentMouseX * 100;
+            const camY = currentMouseY * 100;
+
+            if (config.environment === 'space') {
+                // Background deep void space
+                const spaceGrad = ctx.createRadialGradient(w/2 - camX, h/2 - camY, 10, w/2, h/2, w);
+                spaceGrad.addColorStop(0, '#070a1a');
+                spaceGrad.addColorStop(1, '#020308');
+                ctx.fillStyle = spaceGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Draw deep stardust nebula glow
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.03)';
+                ctx.beginPath();
+                ctx.arc(w/2 - camX*0.5, h/2 - camY*0.5, 300, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Project 3D coordinate star points
+                for (let i = 0; i < count; i++) {
+                    const p = particles[i];
+                    p.z -= 1.5; // fly forward
+
+                    // Loop back stars that fly past the screen
+                    if (p.z <= 0) {
+                        p.z = w;
+                        p.x = (Math.random() - 0.5) * w * 2;
+                        p.y = (Math.random() - 0.5) * h * 2;
+                    }
+
+                    // 3D perspective scaling factor
+                    const fov = 400;
+                    const scale = fov / (fov + p.z);
+                    const projX = (p.x - camX) * scale + w / 2;
+                    const projY = (p.y - camY) * scale + h / 2;
+
+                    if (projX >= 0 && projX < w && projY >= 0 && projY < h) {
+                        ctx.fillStyle = p.color;
+                        ctx.beginPath();
+                        ctx.arc(projX, projY, p.r * scale * 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            } 
+            else if (config.environment === 'cyberpunk') {
+                // Cyberpunk: Synthwave neon vector horizon background
+                const darkGrad = ctx.createLinearGradient(0, 0, 0, h);
+                darkGrad.addColorStop(0, '#090514');
+                darkGrad.addColorStop(1, '#030206');
+                ctx.fillStyle = darkGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Draw moving 3D wireframe perspective floor grid
+                ctx.strokeStyle = 'rgba(255, 0, 127, 0.07)';
+                ctx.lineWidth = 1;
+                const gridHorizon = h * 0.55 - camY * 0.3;
+                const gridYOffset = (Date.now() * 0.05) % 40;
+
+                // Perspective grid lines crossing horizon
+                for (let i = -10; i <= 10; i++) {
+                    const lineX = w / 2 + i * 80;
+                    ctx.beginPath();
+                    ctx.moveTo(w / 2 - camX * 0.8, gridHorizon);
+                    ctx.lineTo(lineX - camX * 1.5, h);
+                    ctx.stroke();
+                }
+
+                // Horizontal moving waves compressing near horizon
+                for (let y = gridHorizon; y < h; y += 25) {
+                    const progress = (y - gridHorizon) / (h - gridHorizon);
+                    // Add scrolling offset
+                    let nextY = gridHorizon + progress * (h - gridHorizon) + gridYOffset * progress;
+                    if (nextY < h) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, nextY);
+                        ctx.lineTo(w, nextY);
+                        ctx.stroke();
+                    }
+                }
+
+                // Render neon glowing nodes
+                for (let i = 0; i < count; i++) {
+                    const p = particles[i];
+                    p.y += p.vy;
+                    p.x += p.vx;
+
+                    if (p.y < 0) {
+                        p.y = h;
+                        p.x = Math.random() * w;
+                    }
+
+                    // Render glows around particles
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x - camX * 0.6, p.y - camY * 0.6, p.r * (p.sparkle ? (Math.sin(Date.now() * 0.01) * 0.4 + 1.2) : 1), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            } 
+            else {
+                // Underwater: vertical shafts of light (caustics) and rising organic bubbles
+                const waterGrad = ctx.createLinearGradient(0, 0, 0, h);
+                waterGrad.addColorStop(0, '#001a33');
+                waterGrad.addColorStop(1, '#000812');
+                ctx.fillStyle = waterGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // Rotating shifting caustics light shafts
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.015)';
+                const shaftsCount = 4;
+                for (let i = 0; i < shaftsCount; i++) {
+                    const offset = Math.sin(Date.now() * 0.0004 + i) * 80;
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.2 + i * 200 + offset - camX, 0);
+                    ctx.lineTo(w * 0.35 + i * 200 + offset * 1.5 - camX, h);
+                    ctx.lineTo(w * 0.15 + i * 200 + offset * 1.2 - camX, h);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+
+                // Draw bubbles
+                for (let i = 0; i < count; i++) {
+                    const p = particles[i];
+                    p.y += p.vy;
+                    
+                    // Sine wave horizontal drift
+                    const angle = p.phase + Date.now() * p.frequency;
+                    const shiftX = Math.sin(angle) * p.amplitude;
+
+                    if (p.y < -20) {
+                        p.y = h + Math.random() * 50;
+                        p.x = Math.random() * w;
+                    }
+
+                    // Render hollow translucent bubbles
+                    ctx.strokeStyle = `rgba(0, 240, 255, ${p.opacity})`;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(p.x + shiftX - camX * 0.4, p.y - camY * 0.4, p.r, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    // Bubble highlight
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity * 0.5})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x + shiftX - camX * 0.4 - p.r*0.3, p.y - camY * 0.4 - p.r*0.3, p.r * 0.25, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            requestAnimationFrame(draw);
+        };
+        requestAnimationFrame(draw);
+
+        // Resize support
+        window.addEventListener('resize', () => {
+            const parent = canvas.parentElement;
+            if (parent) {
+                w = parent.clientWidth;
+                h = parent.clientHeight;
+                canvas.width = w;
+                canvas.height = h;
+                initParticles();
+            }
+        });
+    }
+
+    // Attach to namespace
+    window.papyr3d = papyr3d;
+    window.papyr['3d'] = papyr3d; // both references work cleanly
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/integrations.js ---
+/**
+ * PAPYR INTEGRATIONS ENGINE
+ * Official native connectors for Express, React, Next.js, Angular, Tailwind, Bootstrap, and AI Agents.
+ * v2.0 - Zero-dependency Server-Side Renderer (SSR), fine-grained hook bindings, and AI semantic translation.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading integrations.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // ==========================================
+    // 1. NODE.JS & EXPRESS SERVER-SIDE RENDERING
+    // ==========================================
+    
+    /**
+     * Renders standard Papyr DOM elements and nested structures to a pure static HTML string.
+     * Supports browser nodes, DocumentFragments, array loops, text nodes, and virtual testing objects.
+     */
+    papyr.ssr = function ssr(element) {
+        if (element === null || element === undefined) return '';
+        
+        // 1. Primitive values (strings, numbers)
+        if (typeof element === 'string' || typeof element === 'number') {
+            return String(element);
+        }
+        
+        // 2. Arrays of elements
+        if (Array.isArray(element)) {
+            return element.map(ssr).join('');
+        }
+        
+        // 3. Text Nodes (native nodeType 3 or virtual structure objects)
+        if (element.nodeType === 3 || (element.textContent !== undefined && !element.tagName)) {
+            return String(element.textContent || '');
+        }
+
+        // 4. DocumentFragments / template contents
+        if (element instanceof DocumentFragment || element.tagName === 'TEMPLATE-CONTENT' || (element.children && !element.tagName)) {
+            if (element.children && Array.isArray(element.children)) {
+                return element.children.map(ssr).join('');
+            }
+            return '';
+        }
+
+        // 5. Native and virtual HTML elements
+        let tag = (element.tagName || 'DIV').toLowerCase();
+        
+        let attrsStr = '';
+        if (element.id) {
+            attrsStr += ` id="${element.id}"`;
+        }
+        
+        if (element.className) {
+            attrsStr += ` class="${element.className}"`;
+        }
+        
+        if (element.style) {
+            let styleKeys = Object.keys(element.style);
+            if (styleKeys.length > 0) {
+                let styleStr = styleKeys.map(k => {
+                    let cssKey = k.replace(/([A-Z])/g, '-$1').toLowerCase();
+                    return `${cssKey}:${element.style[k]}`;
+                }).join(';');
+                attrsStr += ` style="${styleStr}"`;
+            }
+        }
+
+        if (element.dataset) {
+            Object.entries(element.dataset).forEach(([k, v]) => {
+                attrsStr += ` data-${k.replace(/([A-Z])/g, '-$1').toLowerCase()}="${v}"`;
+            });
+        }
+
+        // Render other direct primitive properties as HTML attributes (excluding internal variables)
+        const ignoredKeys = ['tagName', 'style', 'dataset', 'classList', 'children', 'parentNode', 'listeners', 'className', 'id', 'textContent', 'nodeType', 'innerHTML'];
+        Object.entries(element).forEach(([k, v]) => {
+            if (!ignoredKeys.includes(k) && typeof v !== 'function' && typeof v !== 'object') {
+                attrsStr += ` ${k}="${v}"`;
+            }
+        });
+
+        // HTML5 self-closing elements
+        const selfClosing = ['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'];
+        if (selfClosing.includes(tag)) {
+            return `<${tag}${attrsStr} />`;
+        }
+
+        // Child components serialization
+        let childrenStr = '';
+        if (element.children && element.children.length > 0) {
+            childrenStr = element.children.map(ssr).join('');
+        } else if (element.textContent) {
+            childrenStr = String(element.textContent);
+        } else if (element.innerHTML) {
+            childrenStr = String(element.innerHTML);
+        }
+
+        return `<${tag}${attrsStr}>${childrenStr}</${tag}>`;
+    };
+
+    /**
+     * Express.js custom template rendering engine callback.
+     * Integrates with Express configurations: app.engine('papyr', papyr.express())
+     */
+    papyr.express = function() {
+        return function(filePath, options, callback) {
+            try {
+                // Delete module cache to allow real-time changes in dev
+                if (typeof require !== 'undefined' && require.resolve) {
+                    delete require.cache[require.resolve(filePath)];
+                    const module = require(filePath);
+                    
+                    let element;
+                    if (typeof module === 'function') {
+                        element = module(options);
+                    } else if (module && typeof module.render === 'function') {
+                        element = module.render(options);
+                    } else if (module && module.default) {
+                        if (typeof module.default === 'function') {
+                            element = module.default(options);
+                        } else {
+                            element = module.default;
+                        }
+                    } else {
+                        element = module;
+                    }
+                    const html = papyr.ssr(element);
+                    return callback(null, html);
+                } else {
+                    return callback(new Error("SSR Express environment requires Node.js standard require resolver."));
+                }
+            } catch (e) {
+                return callback(e);
+            }
+        };
+    };
+
+    // ==========================================
+    // 2. REACT & NEXT.JS BINDINGS
+    // ==========================================
+    papyr.react = {
+        /**
+         * Custom React hook: useStore(papyrState)
+         * Subscribes to fine-grained papyr state reactivity and triggers React re-renders upon state changes.
+         */
+        useStore(papyrState) {
+            const React = window.React || (typeof require === 'function' ? require('react') : null);
+            if (!React) {
+                console.warn("React is not loaded globally or locally. useStore returning static state value.");
+                return papyrState ? papyrState.value : undefined;
+            }
+            
+            const [val, setVal] = React.useState(papyrState ? papyrState.value : undefined);
+            
+            React.useEffect(() => {
+                if (papyrState && typeof papyrState.subscribe === 'function') {
+                    const unsubscribe = papyrState.subscribe(newVal => {
+                        setVal(newVal);
+                    });
+                    return () => {
+                        if (typeof unsubscribe === 'function') unsubscribe();
+                    };
+                }
+            }, [papyrState]);
+            
+            return val;
+        },
+
+        /**
+         * React Component wrapper: <PapyrElement el={element} />
+         * Smoothly mounts a living reactive Papyr element hierarchy inside React/Next.js trees.
+         */
+        Component({ el, ...props }) {
+            const React = window.React || (typeof require === 'function' ? require('react') : null);
+            if (!React) {
+                console.warn("React is not loaded. React component wrapper cannot render.");
+                return null;
+            }
+            
+            const ref = React.useRef(null);
+            
+            React.useEffect(() => {
+                if (ref.current) {
+                    ref.current.innerHTML = '';
+                    let element = typeof el === 'function' ? el() : el;
+                    if (element) {
+                        ref.current.appendChild(element);
+                    }
+                }
+            }, [el]);
+            
+            return React.createElement('div', Object.assign({ ref }, props));
+        }
+    };
+
+    // ==========================================
+    // 3. ANGULAR LIFECYCLE COMPATIBILITY
+    // ==========================================
+    papyr.angular = {
+        /**
+         * Directive-level manual mounter.
+         * Mounts the reactive component into the given Angular native element lifecycle.
+         */
+        mount(el, papyrComponent) {
+            if (!el) return null;
+            el.innerHTML = '';
+            const rendered = typeof papyrComponent === 'function' ? papyrComponent() : papyrComponent;
+            if (rendered) {
+                el.appendChild(rendered);
+            }
+            return rendered;
+        }
+    };
+
+    // ==========================================
+    // 4. TAILWIND & BOOTSTRAP SHORTCUTS
+    // ==========================================
+    
+    // Tailwind direct wrapper mappers
+    papyr.tailwind = (classes, ...children) => {
+        papyr.loadFramework('tailwind');
+        return papyr.div({ class: classes }, ...children);
+    };
+    
+    ['div','span','button','h1','h2','h3','p','a','input','img'].forEach(tag => {
+        papyr.tailwind[tag] = (classes, ...children) => {
+            papyr.loadFramework('tailwind');
+            return papyr(tag, { class: classes }, ...children);
+        };
+    });
+
+    // Bootstrap direct wrapper mappers
+    papyr.bootstrap = (classes, ...children) => {
+        papyr.loadFramework('bootstrap');
+        return papyr.div({ class: classes }, ...children);
+    };
+    
+    ['div','span','button','h1','h2','h3','p','a','input','img'].forEach(tag => {
+        papyr.bootstrap[tag] = (classes, ...children) => {
+            papyr.loadFramework('bootstrap');
+            return papyr(tag, { class: classes }, ...children);
+        };
+    });
+
+    // ==========================================
+    // 5. AI-FRIENDLY SEMANTIC STRUCTURES
+    // ==========================================
+    papyr.ai = {
+        /**
+         * Compiles any Papyr HTMLElement/node tree into a lightweight, noise-free semantic JSON representation.
+         * Designed specifically for LLMs to easily read, manipulate, and generate complex layouts.
+         */
+        toSemanticJSON(el) {
+            if (el === null || el === undefined) return null;
+            
+            // Simple strings, numbers, or text nodes
+            if (typeof el === 'string' || typeof el === 'number') {
+                return { tag: 'text', text: String(el) };
+            }
+            if (el.nodeType === 3 || (el.textContent !== undefined && !el.tagName)) {
+                return { tag: 'text', text: String(el.textContent || '') };
+            }
+
+            let node = {
+                tag: (el.tagName || 'DIV').toLowerCase()
+            };
+
+            if (el.id) {
+                node.id = el.id;
+            }
+            
+            if (el.className) {
+                node.classes = el.className.split(/\s+/).filter(Boolean);
+            }
+
+            // Styles
+            if (el.style) {
+                let styleObj = {};
+                let styleKeys = Object.keys(el.style);
+                styleKeys.forEach(k => {
+                    if (el.style[k]) styleObj[k] = el.style[k];
+                });
+                if (Object.keys(styleObj).length > 0) {
+                    node.style = styleObj;
+                }
+            }
+
+            // Attributes & dataset mapping
+            let attributes = {};
+            const ignoredKeys = ['tagName', 'style', 'dataset', 'classList', 'children', 'parentNode', 'listeners', 'className', 'id', 'textContent', 'nodeType', 'innerHTML'];
+            Object.entries(el).forEach(([k, v]) => {
+                if (!ignoredKeys.includes(k) && typeof v !== 'function' && typeof v !== 'object') {
+                    attributes[k] = v;
+                }
+            });
+            if (el.dataset && Object.keys(el.dataset).length > 0) {
+                Object.assign(attributes, el.dataset);
+            }
+            if (Object.keys(attributes).length > 0) {
+                node.attributes = attributes;
+            }
+
+            // Recursively build children or map text
+            if (el.children && el.children.length > 0) {
+                node.children = el.children.map(child => papyr.ai.toSemanticJSON(child)).filter(Boolean);
+            } else if (el.textContent && el.textContent.trim()) {
+                node.text = el.textContent.trim();
+            }
+
+            return node;
+        },
+
+        /**
+         * Re-compiles a clean semantic JSON structure directly back into fully-functional interactive DOM nodes.
+         */
+        fromSemanticJSON(json) {
+            if (!json) return null;
+            if (typeof json === 'string') {
+                return document.createTextNode(json);
+            }
+            if (json.tag === 'text') {
+                return document.createTextNode(json.text || '');
+            }
+
+            const args = [];
+            
+            // Build class and ID selectors
+            let selector = '';
+            if (json.id) {
+                selector += `#${json.id}`;
+            }
+            if (json.classes) {
+                let classesList = Array.isArray(json.classes) ? json.classes : json.classes.split(/\s+/).filter(Boolean);
+                classesList.forEach(cls => {
+                    selector += `.${cls}`;
+                });
+            }
+            if (selector) {
+                args.push(selector);
+            }
+
+            // Build style and custom attributes options
+            const options = {};
+            if (json.style) {
+                options.style = json.style;
+            }
+            if (json.attributes) {
+                Object.assign(options, json.attributes);
+            }
+            if (Object.keys(options).length > 0) {
+                args.push(options);
+            }
+
+            // Text
+            if (json.text) {
+                args.push(json.text);
+            }
+            
+            // Render and append children elements
+            if (json.children && Array.isArray(json.children)) {
+                json.children.forEach(childJson => {
+                    const childEl = papyr.ai.fromSemanticJSON(childJson);
+                    if (childEl) {
+                        args.push(childEl);
+                    }
+                });
+            }
+
+            return papyr(json.tag || 'div', ...args);
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/system.js ---
+/**
+ * PAPYR SYSTEM & SANDBOX ACCESS ENGINE
+ * Unified, zero-dependency sandboxed interface for File System, Clipboard, notifications, Bluetooth, and WebUSB.
+ * v2.0 - Modern showOpenFilePicker wrappers, local download fallbacks, and OS system integrations.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading system plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // ==========================================
+    // 1. FILE SYSTEM SANDBOX ACCESS (papyr.fs)
+    // ==========================================
+    papyr.fs = {
+        /**
+         * Open a sandboxed file from the user's system.
+         * Leverages high-performance showOpenFilePicker if supported, falling back gracefully to transient inputs.
+         */
+        open(options = {}) {
+            const config = Object.assign({
+                multiple: false,
+                acceptText: false,
+                types: []
+            }, options);
+
+            return new Promise((resolve, reject) => {
+                // If modern File System Access API is supported
+                if (typeof window !== 'undefined' && window.showOpenFilePicker) {
+                    window.showOpenFilePicker({
+                        multiple: config.multiple,
+                        types: config.types
+                    }).then(handles => {
+                        const filesPromises = handles.map(h => h.getFile());
+                        Promise.all(filesPromises).then(files => {
+                            if (config.acceptText) {
+                                const textPromises = files.map(f => f.text());
+                                Promise.all(textPromises).then(texts => {
+                                    resolve(config.multiple ? texts : texts[0]);
+                                }).catch(reject);
+                            } else {
+                                resolve(config.multiple ? files : files[0]);
+                            }
+                        }).catch(reject);
+                    }).catch(reject);
+                } else {
+                    // Fallback to transient input element
+                    if (typeof document === 'undefined') {
+                        return reject(new Error("DOM document required for file dialog fallback."));
+                    }
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = config.multiple;
+                    
+                    input.onchange = () => {
+                        if (!input.files || input.files.length === 0) {
+                            return reject(new Error("No files selected."));
+                        }
+                        const files = Array.from(input.files);
+                        if (config.acceptText) {
+                            const readerPromises = files.map(file => {
+                                return new Promise((res, rej) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => res(reader.result);
+                                    reader.onerror = () => rej(reader.error);
+                                    reader.readAsText(file);
+                                });
+                            });
+                            Promise.all(readerPromises).then(texts => {
+                                resolve(config.multiple ? texts : texts[0]);
+                            }).catch(reject);
+                        } else {
+                            resolve(config.multiple ? files : files[0]);
+                        }
+                    };
+                    input.click();
+                }
+            });
+        },
+
+        /**
+         * Saves string or blob contents by triggering a secure local browser download.
+         */
+        save(content, filename = 'document.txt', type = 'text/plain') {
+            if (typeof window === 'undefined' || typeof document === 'undefined') {
+                console.log(`[papyr.fs.save] Non-browser context saving: ${filename} (${type})`);
+                return Promise.resolve(content);
+            }
+
+            try {
+                const blob = content instanceof Blob ? content : new Blob([content], { type: type });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, 100);
+                
+                return Promise.resolve(filename);
+            } catch (e) {
+                return Promise.reject(e);
+            }
+        }
+    };
+
+    // ==========================================
+    // 2. SYSTEM OS INTERACTIONS (papyr.system)
+    // ==========================================
+    papyr.system = {
+        /**
+         * Issues native OS system notifications with permissions checks.
+         */
+        notify(title, options = {}) {
+            if (typeof window === 'undefined' || !('Notification' in window)) {
+                console.log(`[papyr.system.notify] ${title}: ${options.body || ''}`);
+                return Promise.resolve(false);
+            }
+
+            const config = Object.assign({
+                body: '',
+                icon: ''
+            }, options);
+
+            return new Promise((resolve) => {
+                if (Notification.permission === 'granted') {
+                    new Notification(title, config);
+                    resolve(true);
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification(title, config);
+                            resolve(true);
+                        } else {
+                            resolve(false);
+                        }
+                    });
+                } else {
+                    resolve(false);
+                }
+            });
+        },
+
+        // Unified System Clipboard Wrapper
+        clipboard: {
+            copy(text) {
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    return navigator.clipboard.writeText(text);
+                }
+                return Promise.reject(new Error("Navigator Clipboard API not supported."));
+            },
+            paste() {
+                if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                    return navigator.clipboard.readText();
+                }
+                return Promise.reject(new Error("Navigator Clipboard API not supported."));
+            }
+        },
+
+        // Unified Sandbox Hardware Connectors
+        devices: {
+            bluetooth() {
+                if (typeof navigator !== 'undefined' && navigator.bluetooth) {
+                    return navigator.bluetooth.getAvailability();
+                }
+                return Promise.resolve(false);
+            },
+            usb() {
+                if (typeof navigator !== 'undefined' && navigator.usb) {
+                    return navigator.usb.getDevices();
+                }
+                return Promise.resolve([]);
+            }
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/ml.js ---
+/**
+ * PAPYR MACHINE LEARNING ENGINE
+ * Browser-native machine learning abstraction with zero-dependency fallbacks.
+ * v2.0 - Built-in training solvers (perceptrons), alongside smart TensorFlow.js and ONNX model wrappers.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading ml plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // Simple built-in Perceptron/Neural Classifier for zero-dependency client training
+    class SimpleClassifier {
+        constructor() {
+            this.weights = [];
+            this.bias = 0;
+            this.trained = false;
+        }
+
+        train(inputs, outputs, lr = 0.1, epochs = 200) {
+            if (inputs.length === 0) return;
+            const inputDim = inputs[0].length;
+            this.weights = new Array(inputDim).fill(0).map(() => Math.random() * 2 - 1);
+            this.bias = Math.random() * 2 - 1;
+
+            for (let e = 0; e < epochs; e++) {
+                for (let i = 0; i < inputs.length; i++) {
+                    const x = inputs[i];
+                    const target = outputs[i];
+                    
+                    // Feedforward activation (using tanh activation function)
+                    let sum = this.bias;
+                    for (let d = 0; d < inputDim; d++) {
+                        sum += x[d] * this.weights[d];
+                    }
+                    const prediction = Math.tanh(sum);
+
+                    // Backpropagation gradient delta calculations
+                    const error = target - prediction;
+                    const gradient = error * (1 - prediction * prediction); // tanh derivative
+                    
+                    // Adjust weights & bias
+                    for (let d = 0; d < inputDim; d++) {
+                        this.weights[d] += lr * gradient * x[d];
+                    }
+                    this.bias += lr * gradient;
+                }
+            }
+            this.trained = true;
+        }
+
+        predict(input) {
+            if (!this.trained) return 0;
+            let sum = this.bias;
+            for (let d = 0; d < input.length; d++) {
+                sum += input[d] * (this.weights[d] || 0);
+            }
+            return Math.tanh(sum);
+        }
+    }
+
+    const activeClassifier = new SimpleClassifier();
+
+    papyr.ml = {
+        /**
+         * Trains the built-in lightweight classifier.
+         * Useful for quick statistical predictions without heavy libraries.
+         */
+        train(data = {}, options = {}) {
+            const { inputs = [], outputs = [] } = data;
+            const { learningRate = 0.1, epochs = 250 } = options;
+
+            if (inputs.length === 0 || outputs.length === 0) {
+                console.warn("Papyr ML: Missing inputs/outputs training datasets.");
+                return false;
+            }
+
+            activeClassifier.train(inputs, outputs, learningRate, epochs);
+            return true;
+        },
+
+        /**
+         * Infers predictions on trained datasets or routes to TensorFlow.js models if present.
+         */
+        predict(options = {}) {
+            const { model = 'local', input = null } = options;
+
+            if (input === null) {
+                return Promise.reject(new Error("Input dataset is required for classification predictions."));
+            }
+
+            // TensorFlow.js integration
+            if (window.tf) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        if (typeof model === 'string' && model.startsWith('http')) {
+                            // Load web model dynamic wrap
+                            window.tf.loadLayersModel(model).then(loadedModel => {
+                                const tensor = window.tf.browser.fromPixels(input).resizeNearestNeighbor([224, 224]).toFloat().expandDims();
+                                const prediction = loadedModel.predict(tensor);
+                                prediction.data().then(data => {
+                                    resolve(Array.from(data));
+                                }).catch(reject);
+                            }).catch(reject);
+                        } else if (model === 'image-classifier' && window.cocoSsd) {
+                            // If object detection model is loaded
+                            window.cocoSsd.load().then(loadedModel => {
+                                loadedModel.detect(input).then(resolve).catch(reject);
+                            }).catch(reject);
+                        } else {
+                            // Local tfjs custom operations
+                            const tensor = window.tf.tensor(input);
+                            const result = tensor.sum();
+                            result.data().then(data => resolve(data[0])).catch(reject);
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+
+            // Pure-JS statistical fallback inference
+            if (Array.isArray(input)) {
+                if (!activeClassifier.trained) {
+                    return Promise.reject(new Error("Model Prediction Error: The classifier perceptron engine has not been trained yet. Call papyr.ml.train() first."));
+                }
+                return Promise.resolve(activeClassifier.predict(input));
+            }
+
+            // Reject image element parsing when tfjs is absent (prevents static mock representations)
+            if (input instanceof HTMLElement || (input && input.tagName && ['IMG', 'CANVAS'].includes(input.tagName))) {
+                return Promise.reject(new Error("Missing Dependency Error: TensorFlow.js (window.tf) or coco-ssd is required to perform real image classification natively."));
+            }
+
+            return Promise.reject(new Error("Input Type Error: Inputs to the perceptron engine must be a numeric array. Image inputs require TensorFlow.js."));
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/ocr.js ---
+/**
+ * PAPYR OCR & VOICE EXTRACTOR
+ * Browser-native optical character scanning, speech synthesis, and voice recognition wrappers.
+ * v2.0 - Intelligent Tesseract.js wraps, native speech synthesis bindings, and web speech helpers.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading OCR plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    papyr.ocr = {
+        /**
+         * Scans image elements for characters and text.
+         * Auto-upgrades to Tesseract.js if available globally, falling back to a DOM-attribute meta-extractor.
+         */
+        scan(image, options = {}) {
+            if (!image) {
+                return Promise.reject(new Error("Image element or source URL is required for OCR scanning."));
+            }
+
+            const config = Object.assign({
+                lang: 'eng',
+                logger: null
+            }, options);
+
+            // Tesseract.js integration
+            if (window.Tesseract) {
+                return new Promise((resolve, reject) => {
+                    window.Tesseract.recognize(image, config.lang, {
+                        logger: config.logger
+                    }).then(({ data: { text } }) => {
+                        resolve(text);
+                    }).catch(reject);
+                });
+            }
+
+            // High-fidelity fallback scanner: extract real DOM alternate parameters
+            if (image instanceof HTMLElement) {
+                if (image.alt) {
+                    return Promise.resolve(image.alt);
+                }
+                if (image.dataset && image.dataset.ocrText) {
+                    return Promise.resolve(image.dataset.ocrText);
+                }
+            }
+
+            return Promise.reject(new Error("Missing Dependency Error: Tesseract.js is required to perform live optical character recognition on this image."));
+        },
+
+        /**
+         * System Speech Synthesis (TTS).
+         * Speaks aloud any text string using native Web Speech Synthesis API.
+         */
+        speak(text, options = {}) {
+            if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+                console.log(`[papyr.ocr.speak] TTS speak: ${text}`);
+                return false;
+            }
+
+            const config = Object.assign({
+                pitch: 1.0,
+                rate: 1.0,
+                volume: 1.0,
+                lang: 'en-US'
+            }, options);
+
+            try {
+                window.speechSynthesis.cancel(); // Cancel active queues
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.pitch = config.pitch;
+                utterance.rate = config.rate;
+                utterance.volume = config.volume;
+                utterance.lang = config.lang;
+                window.speechSynthesis.speak(utterance);
+                return true;
+            } catch (err) {
+                console.error("Speech synthesis failed:", err);
+                return false;
+            }
+        },
+
+        /**
+         * Web Speech Recognition (Speech-to-Text).
+         * Listens to the microphone and returns recognized text strings.
+         */
+        listen(options = {}) {
+            const SpeechRecognition = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+            
+            if (!SpeechRecognition) {
+                return Promise.reject(new Error("Speech Recognition API is not supported in this browser."));
+            }
+
+            const config = Object.assign({
+                continuous: false,
+                interimResults: false,
+                lang: 'en-US'
+            }, options);
+
+            return new Promise((resolve, reject) => {
+                try {
+                    const recognition = new SpeechRecognition();
+                    recognition.continuous = config.continuous;
+                    recognition.interimResults = config.interimResults;
+                    recognition.lang = config.lang;
+
+                    recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        resolve(transcript);
+                    };
+
+                    recognition.onerror = (event) => {
+                        reject(new Error(`Speech recognition error: ${event.error}`));
+                    };
+
+                    recognition.start();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/physics.js ---
+/**
+ * PAPYR RIGID 2D PHYSICS SIMULATOR
+ * Modern, high-performance physical simulation engine with zero-dependency Verlet fallbacks.
+ * v2.0 - Multibody Verlet collisions, elastic bounce solvers, mouse drag tracking, and Matter.js auto-upgraders.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading physics plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // Advanced Zero-Dependency 2D Verlet Integration Collision Solver
+    class VerletWorld {
+        constructor(canvas, options = {}) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext('2d');
+            this.gravity = options.gravity !== undefined ? options.gravity : 0.5;
+            this.friction = options.friction !== undefined ? options.friction : 0.99;
+            this.bodies = [];
+            this.running = false;
+            this.draggedBody = null;
+            this.mouseX = 0;
+            this.mouseY = 0;
+
+            this.setupInteraction();
+        }
+
+        addBody(x, y, radius, options = {}) {
+            const body = {
+                x: x,
+                y: y,
+                px: x - (options.vx || 0), // previous x
+                py: y - (options.vy || 0), // previous y
+                r: radius,
+                mass: radius,
+                color: options.color || '#6366f1',
+                elasticity: options.elasticity !== undefined ? options.elasticity : 0.75,
+                isStatic: options.isStatic || false
+            };
+            this.bodies.push(body);
+            return body;
+        }
+
+        setupInteraction() {
+            if (typeof window === 'undefined') return;
+            
+            const getPos = (e) => {
+                const rect = this.canvas.getBoundingClientRect();
+                return {
+                    x: (e.clientX - rect.left) * (this.canvas.width / rect.width),
+                    y: (e.clientY - rect.top) * (this.canvas.height / rect.height)
+                };
+            };
+
+            this.canvas.addEventListener('mousedown', (e) => {
+                const pos = getPos(e);
+                this.mouseX = pos.x;
+                this.mouseY = pos.y;
+                
+                // Find body under cursor
+                for (let b of this.bodies) {
+                    if (b.isStatic) continue;
+                    const dist = Math.hypot(b.x - pos.x, b.y - pos.y);
+                    if (dist < b.r * 1.5) {
+                        this.draggedBody = b;
+                        break;
+                    }
+                }
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                const pos = getPos(e);
+                this.mouseX = pos.x;
+                this.mouseY = pos.y;
+                if (this.draggedBody) {
+                    this.draggedBody.x = pos.x;
+                    this.draggedBody.y = pos.y;
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                this.draggedBody = null;
+            });
+        }
+
+        start() {
+            if (this.running) return;
+            this.running = true;
+            
+            const loop = () => {
+                this.update();
+                this.render();
+            };
+            
+            if (papyr.power && typeof papyr.power.throttle === 'function') {
+                this.stopThrottle = papyr.power.throttle(loop);
+            } else {
+                const legacyLoop = () => {
+                    if (!this.running) return;
+                    loop();
+                    requestAnimationFrame(legacyLoop);
+                };
+                requestAnimationFrame(legacyLoop);
+            }
+        }
+
+        stop() {
+            this.running = false;
+            if (this.stopThrottle) {
+                this.stopThrottle();
+                this.stopThrottle = null;
+            }
+        }
+
+        update() {
+            const w = this.canvas.width;
+            const h = this.canvas.height;
+
+            // 1. Verlet Integration movement solver
+            for (let b of this.bodies) {
+                if (b.isStatic || b === this.draggedBody) continue;
+
+                const vx = (b.x - b.px) * this.friction;
+                const vy = (b.y - b.py) * this.friction;
+
+                b.px = b.x;
+                b.py = b.y;
+
+                b.x += vx;
+                b.y += vy + this.gravity; // Gravity vector
+            }
+
+            // 2. Multibody sphere collision solvers
+            for (let i = 0; i < this.bodies.length; i++) {
+                for (let j = i + 1; j < this.bodies.length; j++) {
+                    const b1 = this.bodies[i];
+                    const b2 = this.bodies[j];
+
+                    const dx = b2.x - b1.x;
+                    const dy = b2.y - b1.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = b1.r + b2.r;
+
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+
+                        // Separate overlapping nodes based on mass
+                        if (!b1.isStatic) {
+                            b1.x -= nx * overlap * 0.5;
+                            b1.y -= ny * overlap * 0.5;
+                        }
+                        if (!b2.isStatic) {
+                            b2.x += nx * overlap * 0.5;
+                            b2.y += ny * overlap * 0.5;
+                        }
+
+                        // Elastic rebound calculation
+                        const kx = b1.x - b1.px - (b2.x - b2.px);
+                        const ky = b1.y - b1.py - (b2.y - b2.py);
+                        const m = b1.mass + b2.mass;
+
+                        if (!b1.isStatic) {
+                            b1.px += kx * (b2.mass / m) * b1.elasticity;
+                            b1.py += ky * (b2.mass / m) * b1.elasticity;
+                        }
+                        if (!b2.isStatic) {
+                            b2.px -= kx * (b1.mass / m) * b2.elasticity;
+                            b2.py -= ky * (b1.mass / m) * b2.elasticity;
+                        }
+                    }
+                }
+            }
+
+            // 3. Boundary collision limits
+            for (let b of this.bodies) {
+                if (b.isStatic || b === this.draggedBody) continue;
+
+                const vx = b.x - b.px;
+                const vy = b.y - b.py;
+
+                // Floor collision
+                if (b.y > h - b.r) {
+                    b.y = h - b.r;
+                    b.py = b.y + vy * b.elasticity;
+                }
+                // Ceiling collision
+                if (b.y < b.r) {
+                    b.y = b.r;
+                    b.py = b.y + vy * b.elasticity;
+                }
+                // Right border
+                if (b.x > w - b.r) {
+                    b.x = w - b.r;
+                    b.px = b.x + vx * b.elasticity;
+                }
+                // Left border
+                if (b.x < b.r) {
+                    b.x = b.r;
+                    b.px = b.x + vx * b.elasticity;
+                }
+            }
+        }
+
+        render() {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Draw rigid bodies
+            for (let b of this.bodies) {
+                this.ctx.fillStyle = b.color;
+                this.ctx.beginPath();
+                this.ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Sleek specular lighting effect
+                this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                this.ctx.beginPath();
+                this.ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.25, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+
+            // Draw drag lines
+            if (this.draggedBody) {
+                this.ctx.strokeStyle = 'rgba(99, 102, 241, 0.4)';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.draggedBody.x, this.draggedBody.y);
+                this.ctx.lineTo(this.mouseX, this.mouseY);
+                this.ctx.stroke();
+            }
+        }
+    }
+
+    papyr.physics = {
+        /**
+         * Creates a dynamic physics orchestration layer inside a canvas element.
+         * Auto-upgrades to Matter.js if loaded globally, otherwise boots our high-performance Verlet engine.
+         */
+        world(options = {}) {
+            const container = papyr.div('.papyr-physics-wrapper', {
+                style: {
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '350px',
+                    background: '#04060d',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.06)'
+                }
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            container.appendChild(canvas);
+
+            // Setup sizes after painting
+            setTimeout(() => {
+                const w = container.clientWidth || 600;
+                const h = container.clientHeight || 350;
+                canvas.width = w;
+                canvas.height = h;
+
+                // Matter.js Integration
+                if (window.Matter) {
+                    try {
+                        const Engine = window.Matter.Engine;
+                        const Render = window.Matter.Render;
+                        const Runner = window.Matter.Runner;
+                        const Bodies = window.Matter.Bodies;
+                        const Composite = window.Matter.Composite;
+
+                        const engine = Engine.create({ gravity: { y: options.gravity || 1 } });
+                        const render = Render.create({
+                            canvas: canvas,
+                            engine: engine,
+                            options: {
+                                width: w,
+                                height: h,
+                                wireframes: false,
+                                background: '#04060d'
+                            }
+                        });
+
+                        Render.run(render);
+                        const runner = Runner.create();
+                        Runner.run(runner, engine);
+
+                        // Bound borders
+                        const ground = Bodies.rectangle(w/2, h + 30, w, 60, { isStatic: true });
+                        const leftWall = Bodies.rectangle(-30, h/2, 60, h, { isStatic: true });
+                        const rightWall = Bodies.rectangle(w + 30, h/2, 60, h, { isStatic: true });
+                        Composite.add(engine.world, [ground, leftWall, rightWall]);
+
+                        // Add some dynamic items
+                        for (let i = 0; i < 8; i++) {
+                            const radius = Math.random() * 20 + 15;
+                            const circle = Bodies.circle(Math.random() * w, 50, radius, {
+                                restitution: 0.8,
+                                render: { fillStyle: i % 2 === 0 ? '#6366f1' : '#14b8a6' }
+                            });
+                            Composite.add(engine.world, circle);
+                        }
+                    } catch (e) {
+                        console.warn("Matter.js loading failed, falling back to Verlet engine.", e);
+                        bootVerlet(canvas, options);
+                    }
+                } else {
+                    bootVerlet(canvas, options);
+                }
+            }, 50);
+
+            function bootVerlet(cv, opt) {
+                const world = new VerletWorld(cv, opt);
+                
+                // Add initial bouncing rigid bodies
+                world.addBody(100, 100, 24, { vx: 2, vy: 0, color: '#6366f1' });
+                world.addBody(200, 80, 18, { vx: -3, vy: 0, color: '#14b8a6' });
+                world.addBody(300, 150, 30, { vx: 1, vy: -2, color: '#ff007f' });
+                world.addBody(400, 120, 20, { vx: 0, vy: 0, color: '#00f0ff' });
+
+                world.start();
+                container._verletWorld = world; // attach reference for developer inspections
+            }
+
+            return container;
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/ai.js ---
+/**
+ * PAPYR AI PLATFORM GATEWAY & PROMPT OPTIMIZER
+ * Unified, zero-dependency connector for OpenAI, Anthropic, Gemini, and local Ollama models.
+ * v2.0 - Prompts template managers, semantic DOM token-minimizer serialization, and offline simulator fallbacks.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading AI plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    papyr.ai = {
+        /**
+         * Reusable prompt templates with simple curly-braces variable interpolation.
+         * Usage: papyr.ai.prompt("Hello {{name}}!", { name: "World" }) => "Hello World!"
+         */
+        prompt(template, variables = {}) {
+            if (typeof template !== 'string') return '';
+            return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => {
+                return variables[key] !== undefined ? String(variables[key]) : match;
+            });
+        },
+
+        /**
+         * Semantic DOM JSON minimizer.
+         * Traverses the element and extracts key content structures to minimize token footprints.
+         */
+        toSemanticJSON(el) {
+            if (typeof document === 'undefined') {
+                return { status: "non-browser-node", info: "Document undefined in non-browser context" };
+            }
+            const element = typeof el === 'string' ? document.querySelector(el) : el;
+            if (!element) return null;
+
+            function extract(node) {
+                if (node.nodeType === 3) { // Text Node
+                    const txt = node.textContent.trim();
+                    return txt ? txt : null;
+                }
+                if (node.nodeType !== 1) return null; // Not an Element
+
+                const data = {
+                    tag: node.tagName.toLowerCase(),
+                };
+
+                // Capture essential semantic identifiers
+                if (node.id) data.id = node.id;
+                if (node.className) data.class = node.className;
+                if (node.type) data.type = node.type;
+                if (node.value) data.value = node.value;
+                if (node.name) data.name = node.name;
+                if (node.placeholder) data.placeholder = node.placeholder;
+                
+                // Expose dataset configurations
+                const ds = Object.keys(node.dataset || {});
+                if (ds.length > 0) {
+                    data.dataset = {};
+                    ds.forEach(k => {
+                        data.dataset[k] = node.dataset[k];
+                    });
+                }
+
+                // Recurse children nodes
+                const children = [];
+                node.childNodes.forEach(child => {
+                    const res = extract(child);
+                    if (res) {
+                        if (typeof res === 'string') {
+                            if (!data.text) data.text = '';
+                            data.text = (data.text + ' ' + res).trim();
+                        } else {
+                            children.push(res);
+                        }
+                    }
+                });
+
+                if (children.length > 0) {
+                    data.children = children;
+                }
+
+                return data;
+            }
+
+            return extract(element);
+        },
+
+        /**
+         * Unified AI Provider interface mapping OpenAI, Anthropic, Gemini, and Ollama endpoints.
+         * Enforces strict real-world connections, API key validations, and secure data privacy protocols.
+         */
+        chat(options = {}) {
+            const provider = (options.provider || 'openai').toLowerCase();
+            const apiKey = options.apiKey || '';
+            const messages = options.messages || [];
+            const model = options.model;
+            
+            const isLocal = provider === 'ollama';
+            
+            if (!isLocal && !apiKey) {
+                return Promise.reject(new Error(`Security Validation Error: A secure API key is required to initiate real-world chat completions with provider '${provider}'.`));
+            }
+
+            const hasFetch = typeof fetch !== 'undefined';
+            if (!hasFetch) {
+                return Promise.reject(new Error("Environment Error: global fetch() API is required to communicate with AI endpoints."));
+            }
+
+            // Real integration logic
+            let url = options.endpoint || '';
+            let headers = {
+                'Content-Type': 'application/json'
+            };
+            let body = {};
+
+            if (provider === 'openai') {
+                url = url || 'https://api.openai.com/v1/chat/completions';
+                headers['Authorization'] = `Bearer ${apiKey}`;
+                body = {
+                    model: model || 'gpt-4o-mini',
+                    messages: messages
+                };
+            } else if (provider === 'anthropic') {
+                url = url || 'https://api.anthropic.com/v1/messages';
+                headers['x-api-key'] = apiKey;
+                headers['anthropic-version'] = '2023-06-01';
+                body = {
+                    model: model || 'claude-3-5-sonnet-20241022',
+                    messages: messages.filter(m => m.role !== 'system'),
+                    max_tokens: 1024
+                };
+                const systemMsg = messages.find(m => m.role === 'system');
+                if (systemMsg) {
+                    body.system = systemMsg.content;
+                }
+            } else if (provider === 'gemini') {
+                const gemModel = model || 'gemini-2.5-flash';
+                url = url || `https://generativelanguage.googleapis.com/v1beta/models/${gemModel}:generateContent?key=${apiKey}`;
+                
+                const contents = messages.filter(m => m.role !== 'system').map(m => {
+                    return {
+                        role: m.role === 'assistant' ? 'model' : 'user',
+                        parts: [{ text: m.content }]
+                    };
+                });
+                
+                body = { contents: contents };
+                
+                const systemMsg = messages.find(m => m.role === 'system');
+                if (systemMsg) {
+                    body.systemInstruction = {
+                        parts: [{ text: systemMsg.content }]
+                    };
+                }
+            } else if (provider === 'ollama') {
+                url = url || 'http://localhost:11434/api/chat';
+                body = {
+                    model: model || 'llama3',
+                    messages: messages,
+                    stream: false
+                };
+            }
+
+            return fetch(url, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(body)
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`API error: ${res.status} ${res.statusText}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                let parsedText = '';
+                if (provider === 'openai' || provider === 'ollama') {
+                    parsedText = data.choices ? data.choices[0].message.content : (data.message ? data.message.content : '');
+                } else if (provider === 'anthropic') {
+                    parsedText = data.content ? data.content[0].text : '';
+                } else if (provider === 'gemini') {
+                    parsedText = (data.candidates && data.candidates[0].content) ? data.candidates[0].content.parts[0].text : '';
+                }
+                return {
+                    text: parsedText,
+                    provider: provider,
+                    simulated: false,
+                    raw: data
+                };
+            });
+        }
+    };
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/pdf.js ---
+/**
+ * PAPYR DOCUMENT & CANVAS EXPORTER (PDF)
+ * Zero-dependency client-side PDF document compiler and DOM element exporter.
+ * v2.0 - High-fidelity printing stylesheet isolates, alongside dynamic jsPDF/html2canvas vectorized auto-upgraders.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading PDF plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    papyr.pdf = {
+        /**
+         * Exports a DOM element or canvas to PDF/document format.
+         * Auto-upgrades to global jsPDF/html2canvas if loaded, falling back to clean print stylesheet wrappers.
+         */
+        export(elementOrSelector, filename = 'document.pdf') {
+            if (typeof window === 'undefined' || typeof document === 'undefined') {
+                console.log(`[papyr.pdf.export] Non-browser context export: ${filename}`);
+                return Promise.resolve(filename);
+            }
+
+            const target = typeof elementOrSelector === 'string' ? document.querySelector(elementOrSelector) : elementOrSelector;
+            if (!target) {
+                return Promise.reject(new Error("Target element not found for PDF export."));
+            }
+
+            // jsPDF / html2canvas auto-upgrade if global jsPDF/jspdf is defined
+            const jsPDFLib = window.jspdf ? window.jspdf.jsPDF : (window.jsPDF || null);
+            if (jsPDFLib) {
+                return new Promise((resolve, reject) => {
+                    try {
+                        const pdf = new jsPDFLib('p', 'mm', 'a4');
+                        
+                        // If html2canvas is present, we can do highly precise pixel rendering
+                        if (window.html2canvas) {
+                            window.html2canvas(target, {
+                                scale: 2,
+                                useCORS: true
+                            }).then(canvas => {
+                                const imgData = canvas.toDataURL('image/png');
+                                const imgWidth = 210; // A4 page width in mm
+                                const pageHeight = 295;
+                                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                                let heightLeft = imgHeight;
+                                let position = 0;
+
+                                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                                heightLeft -= pageHeight;
+
+                                while (heightLeft >= 0) {
+                                    position = heightLeft - imgHeight;
+                                    pdf.addPage();
+                                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                                    heightLeft -= pageHeight;
+                                }
+                                pdf.save(filename);
+                                resolve(filename);
+                            }).catch(reject);
+                        } else {
+                            // Single-page fallback vector representation using jsPDF element rendering
+                            pdf.html(target, {
+                                callback: function (doc) {
+                                    doc.save(filename);
+                                    resolve(filename);
+                                },
+                                x: 10,
+                                y: 10,
+                                width: 190,
+                                windowWidth: target.clientWidth || 800
+                            }).catch(reject);
+                        }
+                    } catch (err) {
+                        reject(err);
+                    }
+                });
+            }
+
+            // Zero-dependency fallback: Isolated media-print style injection and window.print dialog
+            return new Promise((resolve) => {
+                try {
+                    // Create isolated print stylesheet
+                    const style = document.createElement('style');
+                    style.id = 'papyr-transient-print-style';
+                    style.textContent = `
+                        @media print {
+                            body * {
+                                visibility: hidden !important;
+                            }
+                            #${target.id || 'papyr-print-target'}, #${target.id || 'papyr-print-target'} * {
+                                visibility: visible !important;
+                            }
+                            #${target.id || 'papyr-print-target'} {
+                                position: absolute !important;
+                                left: 0 !important;
+                                top: 0 !important;
+                                width: 100% !important;
+                                height: 100% !important;
+                                margin: 0 !important;
+                                padding: 0 !important;
+                                border: none !important;
+                                background: white !important;
+                                color: black !important;
+                            }
+                        }
+                    `;
+                    
+                    // Assign temporary id if not present
+                    const hasId = !!target.id;
+                    if (!hasId) target.id = 'papyr-print-target';
+
+                    document.head.appendChild(style);
+                    
+                    // Trigger native print flow
+                    window.print();
+                    
+                    // Cleanup
+                    setTimeout(() => {
+                        document.head.removeChild(style);
+                        if (!hasId) target.removeAttribute('id');
+                        resolve(filename);
+                    }, 500);
+                } catch (e) {
+                    console.warn("Print fallback failed. Downloading raw HTML/text copy instead.", e);
+                    // Absolute fallback: download HTML content as a standalone HTML file
+                    const htmlContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>${filename}</title>
+                            <style>
+                                body { font-family: system-ui, sans-serif; padding: 2rem; background: #fafafa; }
+                                .container { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 2rem; max-width: 800px; margin: 0 auto; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="container">
+                                ${target.innerHTML}
+                            </div>
+                        </body>
+                        </html>
+                    `;
+                    
+                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename.replace('.pdf', '.html');
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        resolve(filename);
+                    }, 100);
+                }
+            });
+        }
+    };
+})(typeof window !== 'undefined' ? window : this);
+
+
+// --- MODULE: plugins/science.js ---
+/**
+ * PAPYR STEM, GRAPHING, & BUSINESS ACCOUNTING ENGINE
+ * Sleek, zero-dependency science graphing, scientific converters, and accounting invoice computations.
+ * v2.0 - Beautiful responsive Canvas2D grid equation graphers, conversions, and standard tax invoice models.
+ */
+(function(window) {
+    if (!window.papyr) {
+        console.warn("Papyr core not found. Load papyr.js before loading science plugins.");
+        return;
+    }
+
+    const papyr = window.papyr;
+
+    // ==========================================
+    // 1. SCIENTIFIC GRAPHING & STEM (papyr.science)
+    // ==========================================
+    papyr.science = {
+        /**
+         * Renders standard mathematical equations onto a Canvas element wrapped in a beautiful styled container.
+         * Support standard function definitions, coordinate grid systems, and custom vibrant styling.
+         */
+        graph(options = {}) {
+            const container = papyr.div('.papyr-graph-wrapper', {
+                style: {
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '280px',
+                    background: '#0a0d1a',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    padding: '8px'
+                }
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.style.display = 'block';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            container.appendChild(canvas);
+
+            setTimeout(() => {
+                const w = container.clientWidth || 400;
+                const h = container.clientHeight || 280;
+                canvas.width = w;
+                canvas.height = h;
+
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, w, h);
+
+                const equation = options.equation || ((x) => Math.sin(x));
+                const range = options.range || [-10, 10, -5, 5];
+                const [minX, maxX, minY, maxY] = range;
+                
+                const plotColor = options.color || '#10b981';
+                const gridColor = options.gridColor || 'rgba(255, 255, 255, 0.05)';
+                const axisColor = options.axisColor || 'rgba(255, 255, 255, 0.3)';
+
+                // Map coordinates from graph dimensions to screen pixels
+                const toScreenX = (x) => ((x - minX) / (maxX - minX)) * w;
+                const toScreenY = (y) => h - ((y - minY) / (maxY - minY)) * h;
+
+                // 1. Draw Grid Lines
+                ctx.strokeStyle = gridColor;
+                ctx.lineWidth = 1;
+                
+                // Vertical grid lines
+                for (let x = Math.ceil(minX); x <= Math.floor(maxX); x++) {
+                    const sx = toScreenX(x);
+                    ctx.beginPath();
+                    ctx.moveTo(sx, 0);
+                    ctx.lineTo(sx, h);
+                    ctx.stroke();
+                }
+
+                // Horizontal grid lines
+                for (let y = Math.ceil(minY); y <= Math.floor(maxY); y++) {
+                    const sy = toScreenY(y);
+                    ctx.beginPath();
+                    ctx.moveTo(0, sy);
+                    ctx.lineTo(w, sy);
+                    ctx.stroke();
+                }
+
+                // 2. Draw Axes
+                ctx.strokeStyle = axisColor;
+                ctx.lineWidth = 1.5;
+
+                // Y Axis (X = 0)
+                if (minX <= 0 && maxX >= 0) {
+                    const sx0 = toScreenX(0);
+                    ctx.beginPath();
+                    ctx.moveTo(sx0, 0);
+                    ctx.lineTo(sx0, h);
+                    ctx.stroke();
+                }
+
+                // X Axis (Y = 0)
+                if (minY <= 0 && maxY >= 0) {
+                    const sy0 = toScreenY(0);
+                    ctx.beginPath();
+                    ctx.moveTo(0, sy0);
+                    ctx.lineTo(w, sy0);
+                    ctx.stroke();
+                }
+
+                // 3. Draw Equation Curve
+                let eqFunc = equation;
+                if (typeof equation === 'string') {
+                    try {
+                        // Safe evaluation fallback for basic math expressions
+                        eqFunc = (x) => {
+                            const cleanEq = equation.replace(/sin/g, 'Math.sin')
+                                                    .replace(/cos/g, 'Math.cos')
+                                                    .replace(/tan/g, 'Math.tan')
+                                                    .replace(/pi/g, 'Math.PI')
+                                                    .replace(/exp/g, 'Math.exp')
+                                                    .replace(/pow/g, 'Math.pow');
+                            return new Function('x', `return ${cleanEq}`)(x);
+                        };
+                    } catch (e) {
+                        console.error("Failed to parse equation string:", e);
+                        eqFunc = (x) => 0;
+                    }
+                }
+
+                ctx.strokeStyle = plotColor;
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+
+                let first = true;
+                const resolution = w; // evaluate at every pixel column
+                for (let i = 0; i <= resolution; i++) {
+                    const cx = minX + (i / resolution) * (maxX - minX);
+                    try {
+                        const cy = eqFunc(cx);
+                        if (!isNaN(cy) && isFinite(cy)) {
+                            const sx = toScreenX(cx);
+                            const sy = toScreenY(cy);
+                            
+                            if (first) {
+                                ctx.moveTo(sx, sy);
+                                first = false;
+                            } else {
+                                ctx.lineTo(sx, sy);
+                            }
+                        }
+                    } catch (err) {
+                        // skip drawing invalid points
+                    }
+                }
+                ctx.stroke();
+
+                // Draw equation label overlay
+                ctx.fillStyle = '#94a3b8';
+                ctx.font = '11px sans-serif';
+                ctx.fillText(typeof equation === 'string' ? `y = ${equation}` : 'y = f(x)', 12, 20);
+
+            }, 50);
+
+            return container;
+        },
+
+        /**
+         * STEM scientific converters.
+         */
+        convert(val, from, to) {
+            const key = `${from.toLowerCase()}->${to.toLowerCase()}`;
+            const conversions = {
+                'c->f': (v) => v * 1.8 + 32,
+                'f->c': (v) => (v - 32) / 1.8,
+                'm->ft': (v) => v * 3.28084,
+                'ft->m': (v) => v / 3.28084,
+                'kg->lbs': (v) => v * 2.20462,
+                'lbs->kg': (v) => v / 2.20462,
+                'km->mi': (v) => v * 0.621371,
+                'mi->km': (v) => v / 0.621371
+            };
+
+            if (conversions[key]) {
+                return conversions[key](val);
+            }
+            console.warn(`STEM Convert: Conversion from "${from}" to "${to}" is not defined.`);
+            return val;
+        },
+
+        /**
+         * BMI Scientific Calculator.
+         */
+        bmi(weightKg, heightM) {
+            if (heightM <= 0) return { score: 0, category: 'Invalid' };
+            const score = parseFloat((weightKg / (heightM * heightM)).toFixed(2));
+            let category = 'Normal';
+            if (score < 18.5) category = 'Underweight';
+            else if (score >= 25 && score < 30) category = 'Overweight';
+            else if (score >= 30) category = 'Obese';
+            return { score, category };
+        }
+    };
+
+    // ==========================================
+    // 2. FINANCIAL BUSINESS ENGINES (papyr.business)
+    // ==========================================
+    papyr.business = {
+        /**
+         * Computes line-item invoicing, taxation, and subtotal parameters.
+         */
+        invoice(data = {}) {
+            const items = data.items || [];
+            const taxRate = data.taxRate !== undefined ? data.taxRate : 0.08; // 8% default
+            
+            let subtotal = 0;
+            const computedItems = items.map(item => {
+                const qty = item.qty !== undefined ? item.qty : 1;
+                const price = item.price !== undefined ? item.price : 0;
+                const total = parseFloat((qty * price).toFixed(2));
+                subtotal += total;
+                return Object.assign({}, item, { qty, price, total });
+            });
+
+            const taxAmount = parseFloat((subtotal * taxRate).toFixed(2));
+            const grandTotal = parseFloat((subtotal + taxAmount).toFixed(2));
+
+            return {
+                items: computedItems,
+                subtotal: parseFloat(subtotal.toFixed(2)),
+                taxRate: taxRate,
+                taxAmount: taxAmount,
+                total: grandTotal,
+                invoiceNumber: data.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+                date: data.date || new Date().toLocaleDateString()
+            };
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);
 
 
 

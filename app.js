@@ -131,9 +131,795 @@ let app = papyr.div(".bg-slate-900.p-6.rounded-2xl.shadow-xl.border.border-slate
             papyr.p(".text-xs.text-cyan-300:Reactive properties render on-the-fly inside Tailwind layouts seamlessly.")
         )
     ),
-    
     papyr.button(".w-full.bg-gradient-to-r.from-cyan-500.to-indigo-500.hover:from-cyan-600.hover:to-indigo-600.text-white.font-bold.py-2.px-4.rounded-xl.shadow-lg.shadow-indigo-500/20.transition-all:Toggle Reactive Widget", {
         onclick: () => toggleState.value = !toggleState.value
+    })
+);
+
+return app;`,
+
+        immersive: `// 🌌 Immersive 3D worlds with zero-dependency high-performance fallback!
+let stateWorld = papyr.state('space');
+let container = papyr.div('.relative.w-full.h-full', { style: { minHeight: '320px', borderRadius: '12px', overflow: 'hidden' } });
+
+const rebuildScene = () => {
+    container.innerHTML = '';
+    
+    // Mount the gorgeous immersive scene (detects THREE globally, or runs high-performance fallbacks)
+    let scene = papyr['3d'].scene({
+        environment: stateWorld.value,
+        depth: true,
+        overlay: papyr.div('.text-center.p-4', { style: { pointerEvents: 'auto', background: 'rgba(5, 5, 10, 0.65)', backdropFilter: 'blur(8px)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' } },
+            papyr.h3("🌌 Cinematic Preset: " + stateWorld.value.toUpperCase(), { style: { color: 'white', margin: '0 0 4px 0' } }),
+            papyr.p("Move pointer to tilt the camera in 3D parallax depth space.", { style: { color: '#94a3b8', fontSize: '0.8rem', margin: '0 0 12px 0' } }),
+            papyr.flex.row({ justify: 'center', gap: '8px' },
+                papyr.button("Deep Space", { 
+                    style: { padding: '6px 12px', fontSize: '0.75rem', background: stateWorld.value === 'space' ? '#6366f1' : 'rgba(255,255,255,0.08)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }, 
+                    onclick: () => { stateWorld.value = 'space'; rebuildScene(); } 
+                }),
+                papyr.button("Cyberpunk", { 
+                    style: { padding: '6px 12px', fontSize: '0.75rem', background: stateWorld.value === 'cyberpunk' ? '#ff007f' : 'rgba(255,255,255,0.08)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }, 
+                    onclick: () => { stateWorld.value = 'cyberpunk'; rebuildScene(); } 
+                }),
+                papyr.button("Deep Sea", { 
+                    style: { padding: '6px 12px', fontSize: '0.75rem', background: stateWorld.value === 'underwater' ? '#00f0ff' : 'rgba(255,255,255,0.08)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }, 
+                    onclick: () => { stateWorld.value = 'underwater'; rebuildScene(); } 
+                })
+            )
+        )
+    });
+    
+    container.appendChild(scene);
+};
+
+rebuildScene();
+return container;`,
+
+        ssr: `// 🖧 High-performance Server-Side Rendering (SSR) & Express Templates!
+let app = papyr.flex.col(
+    papyr.h3("🖧 Papyr Server-Side Renderer (SSR)", { style: { color: 'white', margin: '0' } }),
+    papyr.p("Renders living reactive DOM nodes directly into standard static HTML strings.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 10px 0' } }),
+    papyr.div(".card", { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', width: '100%' } },
+        papyr.h4("Compiled Static HTML Output:", { style: { color: '#38bdf8', fontSize: '0.9rem', margin: '0 0 8px 0' } }),
+        papyr.pre({ style: { background: '#090d16', padding: '12px', borderRadius: '6px', overflowX: 'auto', border: '1px solid rgba(56, 189, 248, 0.2)' } },
+            papyr.code(() => {
+                // Let's create an element and serialize it to static HTML string
+                let el = papyr.div('.user-profile', { id: 'usr-12', style: { color: '#818cf8', fontWeight: 'bold' } },
+                    papyr.h4("Developer Profile"),
+                    papyr.p("Zero configuration deployment setups.")
+                );
+                return papyr.ssr(el);
+            }, { style: { color: '#a7f3d0', fontSize: '0.8rem', fontFamily: 'monospace' } })
+        )
+    )
+);
+return app;`,
+
+        react: `// ⚛️ Seamless React & Next.js Ecosystem Wrapper
+let app = papyr.flex.col(
+    papyr.h3("⚛️ Next.js & React Integration", { style: { color: 'white', margin: '0' } }),
+    papyr.p("Easily subscribe React functional components to fine-grained state updates or mount Papyr elements.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 15px 0' } }),
+    papyr.div(".card", { style: { background: 'rgba(129, 140, 248, 0.05)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(129, 140, 248, 0.15)', width: '100%' } },
+        papyr.h4("Integration Syntax Cheat-Sheet:", { style: { color: '#818cf8', fontSize: '0.9rem', margin: '0 0 10px 0' } }),
+        papyr.pre({ style: { background: '#090d16', padding: '12px', borderRadius: '6px', overflowX: 'auto' } },
+            papyr.code(\`// Next.js page component
+import { useState, useEffect } from 'react';
+import { papyr } from 'papyr';
+
+export default function Dashboard() {
+  // Subscribe to fine-grained Papyr states
+  const count = papyr.react.useStore(myGlobalPapyrState);
+
+  return (
+    <div>
+      <h3>React Counter: {count}</h3>
+      {/* Mount raw Papyr elements natively */}
+      <papyr.react.Component el={() => papyr.div('.card', 'Hello from Papyr!')} />
+    </div>
+  );
+}\`, { style: { color: '#e2e8f0', fontSize: '0.75rem', fontFamily: 'monospace' } })
+        )
+    )
+);
+return app;`,
+
+        ai: `// 🤖 AI-Friendly Flat Semantic JSON Formats
+let app = papyr.flex.col(
+    papyr.h3("🤖 AI-Readable Semantic JSON", { style: { color: 'white', margin: '0' } }),
+    papyr.p("Flattens complex DOM nodes into semantic structures for LLMs to generate or modify easily.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 10px 0' } }),
+    
+    papyr.div(".card", { style: { background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', width: '100%' } },
+        papyr.h4("AI-Generated Flat JSON:", { style: { color: '#34d399', fontSize: '0.9rem', margin: '0 0 8px 0' } }),
+        papyr.pre({ style: { background: '#090d16', padding: '12px', borderRadius: '6px', overflowX: 'auto', border: '1px solid rgba(52, 211, 153, 0.2)' } },
+            papyr.code(() => {
+                let rawEl = papyr.div('.p-4.bg-indigo-900.rounded-xl', { id: 'ai-card' },
+                    papyr.h3("Generated Headline"),
+                    papyr.p("Created in seconds by AI Agents.")
+                );
+                let json = papyr.ai.toSemanticJSON(rawEl);
+                return JSON.stringify(json, null, 2);
+            }, { style: { color: '#a7f3d0', fontSize: '0.75rem', fontFamily: 'monospace' } })
+        )
+    )
+);
+return app;`,
+
+        physics: `// ⚽ High-Performance 2D Rigid Verlet Physics Simulation!
+let container = papyr.div('.relative.w-full', { style: { minHeight: '380px' } });
+
+let controls = papyr.flex.row({ justify: 'between', align: 'center', style: { marginBottom: '10px' } },
+    papyr.h4("⚽ Interactive Verlet Sandbox", { style: { color: '#fff', margin: '0' } }),
+    papyr.button("Add Rigid Node", {
+        class: 'btn-primary',
+        style: { fontSize: '0.8rem', padding: '6px 12px' },
+        onclick: () => {
+            const world = container.querySelector('.papyr-physics-wrapper')._verletWorld;
+            if (world) {
+                const colors = ['#6366f1', '#14b8a6', '#ff007f', '#00f0ff', '#eab308'];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const radius = Math.random() * 15 + 12;
+                world.addBody(
+                    Math.random() * (world.canvas.width - 50) + 25, 
+                    40, 
+                    radius, 
+                    { vx: Math.random() * 6 - 3, vy: 0, color: color }
+                );
+                papyr.toast("Physical Node Spawned! ⚽", "success");
+            }
+        }
+    })
+);
+
+// Spawn physics world (auto-upgrades to Matter.js if available, otherwise Verlet fallback)
+let worldComponent = papyr.physics.world({ gravity: 0.4, friction: 0.99 });
+
+container.appendChild(controls);
+container.appendChild(worldComponent);
+
+return container;`,
+
+        science: `// 📈 Scientific Equation Grapher & Conversion Calculator
+let equationText = papyr.state("Math.sin(x)");
+let conversionValue = papyr.state(100);
+let convertedValue = papyr.computed(() => papyr.science.convert(conversionValue.value, 'c', 'f').toFixed(2));
+
+let graphContainer = papyr.div({ style: { flex: 1, minHeight: '260px' } });
+
+const redrawGraph = () => {
+    graphContainer.innerHTML = '';
+    let graph = papyr.science.graph({
+        equation: equationText.value,
+        range: [-10, 10, -5, 5],
+        color: '#10b981'
+    });
+    graphContainer.appendChild(graph);
+};
+
+let app = papyr.flex.col(
+    papyr.h3("📊 STEM Equation Plotter & Converter", { style: { color: 'white', margin: '0 0 10px 0' } }),
+    
+    // Graph Area
+    papyr.flex.row({ style: { gap: '12px', marginBottom: '16px' } },
+        papyr.input("text", "Math.sin(x)", {
+            style: { flex: 1 },
+            oninput: (e) => {
+                equationText.value = e.target.value;
+                redrawGraph();
+            }
+        }),
+        papyr.button("Plot Equation", {
+            class: 'btn-primary',
+            onclick: redrawGraph
+        })
+    ),
+    graphContainer,
+    
+    // STEM Converter Area
+    papyr.div('.card', { style: { background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.05)', marginTop: '12px' } },
+        papyr.h4("🌡️ STEM Conversion Solver", { style: { color: 'white', margin: '0 0 8px 0' } }),
+        papyr.flex.row({ align: 'center', style: { gap: '10px' } },
+            papyr.input("number", "100", {
+                style: { width: '80px' },
+                oninput: (e) => conversionValue.value = parseFloat(e.target.value) || 0
+            }),
+            papyr.span("°Celsius  ➡  ", { style: { color: '#cbd5e1' } }),
+            papyr.span(() => convertedValue.value + " °Fahrenheit", { style: { color: '#14b8a6', fontWeight: 'bold' } })
+        )
+    )
+);
+
+// Initial plot rendering
+setTimeout(redrawGraph, 100);
+
+return app;`,
+
+        system: `// 📁 OS Sandboxed File Access & System Interactions
+let fileText = papyr.state("Type some content here, then save it to your local file system!");
+
+let app = papyr.flex.col(
+    papyr.h3("📁 Local File Sandbox & Copy/Paste", { style: { color: 'white', margin: '0' } }),
+    papyr.p("Write sandboxed helper systems directly using native Web API wrappers safely.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 12px 0' } }),
+    
+    papyr.textarea({
+        style: { width: '100%', height: '100px', background: 'rgba(0,0,0,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '10px', fontSize: '0.85rem', fontFamily: 'monospace', marginBottom: '12px' },
+        oninput: (e) => fileText.value = e.target.value,
+        textContent: fileText.value
+    }),
+    
+    papyr.flex.row({ style: { gap: '8px' } },
+        papyr.button("Save to Disk 💾", {
+            class: 'btn-primary',
+            onclick: () => {
+                papyr.fs.save(fileText.value, 'my-document.txt', 'text/plain')
+                    .then(file => papyr.toast("Successfully Saved " + file + "! 🎉", "success"))
+                    .catch(err => papyr.toast("Save failed: " + err.message, "error"));
+            }
+        }),
+        papyr.button("Clipboard Copy 📋", {
+            class: 'toolbar-btn',
+            style: { color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.4)' },
+            onclick: () => {
+                papyr.system.clipboard.copy(fileText.value)
+                    .then(() => papyr.toast("Copied to System Clipboard! 📋", "success"))
+                    .catch(err => papyr.toast("Clipboard copy failed: " + err.message, "error"));
+            }
+        }),
+        papyr.button("Notify Me 🔔", {
+            class: 'toolbar-btn',
+            style: { color: '#a855f7', borderColor: 'rgba(168, 85, 247, 0.4)' },
+            onclick: () => {
+                papyr.system.notify("Papyr Workspace Notification 🔔", {
+                    body: "We have built seven new premium plugin capability modules successfully!"
+                }).then(success => {
+                    if (success) papyr.toast("System notification fired! 🔔", "success");
+                    else papyr.toast("Permission denied for push notifications.", "info");
+                });
+            }
+        })
+    )
+);
+
+return app;`,
+
+        ai_chat: `// 💬 Premium AI Assistant & Unified Provider Chat
+let provider = papyr.state('openai');
+let apiKey = papyr.state('');
+let queryText = papyr.state('');
+let responseText = papyr.state('Enter your secure API key and prompt below to communicate with real AI models natively from your browser.');
+let isLoading = papyr.state(false);
+
+let app = papyr.flex.col(
+    papyr.h3("💬 Multi-Provider AI Assistant", { style: { color: 'white', margin: '0 0 10px 0' } }),
+    
+    papyr.flex.row({ align: 'center', style: { gap: '10px', marginBottom: '12px' } },
+        papyr.span("Select API Provider:", { style: { color: '#94a3b8', fontSize: '0.85rem' } }),
+        papyr.button(() => provider.value === 'openai' ? 'OpenAI ⭐' : 'OpenAI', {
+            style: { fontSize: '0.75rem', padding: '4px 10px', background: provider.value === 'openai' ? '#6366f1' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' },
+            onclick: () => provider.value = 'openai'
+        }),
+        papyr.button(() => provider.value === 'gemini' ? 'Gemini ⭐' : 'Gemini', {
+            style: { fontSize: '0.75rem', padding: '4px 10px', background: provider.value === 'gemini' ? '#10b981' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' },
+            onclick: () => provider.value = 'gemini'
+        }),
+        papyr.button(() => provider.value === 'anthropic' ? 'Anthropic ⭐' : 'Anthropic', {
+            style: { fontSize: '0.75rem', padding: '4px 10px', background: provider.value === 'anthropic' ? '#a855f7' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: '4px', cursor: 'pointer', color: '#fff' },
+            onclick: () => provider.value = 'anthropic'
+        })
+    ),
+
+    papyr.flex.row({ align: 'center', style: { gap: '10px', marginBottom: '12px' } },
+        papyr.span("Enter Secure API Key:", { style: { color: '#94a3b8', fontSize: '0.85rem' } }),
+        papyr.input("password", "sk-...", {
+            style: { flex: 1, padding: '6px 10px', fontSize: '0.8rem', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', color: '#fff' },
+            oninput: (e) => apiKey.value = e.target.value
+        })
+    ),
+    papyr.p("🔒 Security & Privacy: API keys are strictly in-memory client-side and never saved or shared with third parties.", { style: { fontSize: '0.72rem', color: '#64748b', margin: '-8px 0 16px 0' } }),
+    
+    papyr.flex.row({ style: { gap: '10px', marginBottom: '16px' } },
+        papyr.input("text", "Ask the AI assistant something...", {
+            style: { flex: 1 },
+            oninput: (e) => queryText.value = e.target.value
+        }),
+        papyr.button(() => isLoading.value ? "Thinking..." : "Send Chat ⚡", {
+            class: 'btn-primary',
+            onclick: () => {
+                if (!apiKey.value.trim()) return papyr.toast("Please enter your API Key first!", "error");
+                if (!queryText.value.trim()) return papyr.toast("Please type a message!", "error");
+                isLoading.value = true;
+                responseText.value = "Sending request to " + provider.value + " endpoints...";
+                
+                papyr.ai.chat({
+                    provider: provider.value,
+                    apiKey: apiKey.value,
+                    messages: [{ role: 'user', content: queryText.value }]
+                }).then(res => {
+                    responseText.value = res.text;
+                    papyr.toast("AI response received! ⚡", "success");
+                }).catch(err => {
+                    responseText.value = "Error: " + err.message;
+                    papyr.toast("AI call failed.", "error");
+                }).finally(() => {
+                    isLoading.value = false;
+                });
+            }
+        })
+    ),
+    
+    papyr.div('.card', { style: { background: '#090d16', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)', minHeight: '120px' } },
+        papyr.h4("🤖 Assistant Output:", { style: { color: '#6366f1', fontSize: '0.85rem', margin: '0 0 8px 0' } }),
+        papyr.p(() => responseText.value, { style: { color: '#e2e8f0', fontSize: '0.9rem', margin: '0', whiteSpace: 'pre-wrap' } })
+    )
+);
+return app;`,
+
+        cheatsheet: `// 📑 Complete Interactive HTML, JS & CSS Cheat Sheet Showcase!
+let activeSubTab = papyr.state('html');
+let arrayState = papyr.state(['HTML', 'CSS', 'JavaScript']);
+let stringVal = papyr.state('Book Haven Guides');
+let mathNum = papyr.state(4.6);
+let dateState = papyr.state(new Date().toString());
+let errorMsg = papyr.state('');
+
+let app = papyr.flex.col({ style: { width: '100%', gap: '16px' } },
+    papyr.h3("📑 Creative Computing Cheat Sheet Showcase", { style: { color: 'white', margin: '0' } }),
+    papyr.p("An interactive, high-fidelity playground displaying full native support for all HTML5 elements, JavaScript features, and CSS visual rules.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 10px 0' } }),
+    
+    // Sub-navigation bar
+    papyr.flex.row({ style: { gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '10px', flexWrap: 'wrap' } },
+        papyr.button("HTML Elements", {
+            style: () => ({
+                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px', cursor: 'pointer', border: 'none',
+                background: activeSubTab.value === 'html' ? '#14b8a6' : 'rgba(255,255,255,0.05)',
+                color: 'white', fontWeight: 'bold', transition: 'background 0.2s'
+            }),
+            onclick: () => activeSubTab.value = 'html'
+        }),
+        papyr.button("JavaScript Actions", {
+            style: () => ({
+                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px', cursor: 'pointer', border: 'none',
+                background: activeSubTab.value === 'js' ? '#6366f1' : 'rgba(255,255,255,0.05)',
+                color: 'white', fontWeight: 'bold', transition: 'background 0.2s'
+            }),
+            onclick: () => activeSubTab.value = 'js'
+        }),
+        papyr.button("CSS Visual Rules", {
+            style: () => ({
+                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px', cursor: 'pointer', border: 'none',
+                background: activeSubTab.value === 'css' ? '#a855f7' : 'rgba(255,255,255,0.05)',
+                color: 'white', fontWeight: 'bold', transition: 'background 0.2s'
+            }),
+            onclick: () => activeSubTab.value = 'css'
+        }),
+        papyr.button("Performance & Philosophy", {
+            style: () => ({
+                padding: '8px 16px', fontSize: '0.8rem', borderRadius: '6px', cursor: 'pointer', border: 'none',
+                background: activeSubTab.value === 'power' ? '#f43f5e' : 'rgba(255,255,255,0.05)',
+                color: 'white', fontWeight: 'bold', transition: 'background 0.2s'
+            }),
+            onclick: () => activeSubTab.value = 'power'
+        })
+    ),
+    
+    // View container
+    papyr.if(activeSubTab, (tab) => {
+        if (tab === 'html') {
+            return papyr.flex.col({ style: { gap: '16px' } },
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Text & Formatting Elements", { style: { color: '#14b8a6', margin: '0 0 12px 0' } }),
+                    papyr.pre("New Arrivals\\\\nSpecial Offers\\\\nBestsellers", { style: { background: '#090d16', padding: '10px', borderRadius: '6px', color: '#cbd5e1', fontSize: '0.8rem', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', fontFamily: 'monospace' } }),
+                    papyr.h1("Welcome to Book Haven", { style: { fontSize: '1.5rem', color: '#fff', margin: '12px 0 6px 0' } }),
+                    papyr.p("Welcome to our online bookshop where you can find a wide selection of books.", { style: { margin: '0 0 10px 0', fontSize: '0.9rem', color: '#cbd5e1' } }),
+                    papyr.flex.row({ style: { flexWrap: 'wrap', gap: '12px', alignItems: 'center', marginBottom: '10px' } },
+                        papyr.strong("Exclusive Sale"),
+                        papyr.em("Must-read Classics"),
+                        papyr.tt("ISBN: 978-3-16-148410-0", { style: { fontFamily: 'monospace', color: '#fda4af' } }),
+                        papyr.code("alert(\\"Welcome to our bookstore!\\");", { style: { background: '#090d16', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem', color: '#a7f3d0' } }),
+                        papyr.cite("by Jane Austen", { style: { fontStyle: 'italic', color: '#94a3b8' } })
+                    ),
+                    papyr.blockquote('"Reading is to the mind what exercise is to the body." - Joseph Addison', { style: { borderLeft: '4px solid #14b8a6', paddingLeft: '12px', color: '#94a3b8', fontStyle: 'italic', margin: '10px 0' } }),
+                    papyr.address("123 Book St., Bibliopolis, BK 12345", { style: { fontSize: '0.8rem', color: '#64748b', fontStyle: 'normal' } })
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Links, Lists & Graphics", { style: { color: '#14b8a6', margin: '0 0 12px 0' } }),
+                    papyr.flex.row({ style: { gap: '16px', flexWrap: 'wrap', marginBottom: '14px' } },
+                        papyr.a("Visit Our Store", { href: 'https://bookhaven.com', target: '_blank', style: { color: '#38bdf8', fontWeight: 'bold' } }),
+                        papyr.a("Contact Us", { href: 'mailto:info@bookhaven.com', style: { color: '#38bdf8' } }),
+                        papyr.a("Learn More (Anchor Link)", { href: '#section1', style: { color: '#a5b4fc' } })
+                    ),
+                    papyr.hr({ size: '3', width: '100%', style: { border: 'none', background: 'rgba(255,255,255,0.1)', height: '3px' } }),
+                    
+                    papyr.flex.row({ style: { gap: '20px', flexWrap: 'wrap', marginTop: '12px' } },
+                        papyr.flex.col({ style: { flex: '1', minWidth: '150px' } },
+                            papyr.span("Unordered List:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
+                            papyr.ul(
+                                papyr.li("Fiction"),
+                                papyr.li("Non-Fiction"),
+                                papyr.li("Children's Books")
+                            )
+                        ),
+                        papyr.flex.col({ style: { flex: '1', minWidth: '150px' } },
+                            papyr.span("Ordered List (starts at 2):", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
+                            papyr.ol({ start: 2 },
+                                papyr.li("Second Item"),
+                                papyr.li("Third Item")
+                            )
+                        ),
+                        papyr.flex.col({ style: { flex: '1', minWidth: '150px' } },
+                            papyr.span("Description List:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
+                            papyr.dl(
+                                papyr.dt("Author", { style: { fontWeight: 'bold', color: '#fff' } }),
+                                papyr.dd("J.K. Rowling", { style: { color: '#cbd5e1', marginLeft: '12px' } })
+                            )
+                        )
+                    )
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Forms, Tables & Video Media", { style: { color: '#14b8a6', margin: '0 0 12px 0' } }),
+                    papyr.form({ onsubmit: (e) => { e.preventDefault(); papyr.toast("Form Submitted!", "success"); } },
+                        papyr.flex.col({ style: { gap: '10px' } },
+                            papyr.flex.row({ style: { gap: '10px', flexWrap: 'wrap' } },
+                                papyr.flex.col({ style: { flex: 1, minWidth: '140px' } },
+                                    papyr.span("Single-line Text Input", { style: { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px' } }),
+                                    papyr.input("text", "Jane Doe", { size: '20', style: { width: '100%' } })
+                                ),
+                                papyr.flex.col({ style: { flex: 1, minWidth: '140px' } },
+                                    papyr.span("Dropdown List", { style: { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px' } }),
+                                    papyr.select(
+                                        papyr.option("Fiction"),
+                                        papyr.option("History"),
+                                        papyr.option("Science"),
+                                        { name: 'genre' }
+                                    )
+                                ),
+                                papyr.flex.col({ style: { flex: 1, minWidth: '140px' } },
+                                    papyr.span("Dropdown (Multiple, size=3)", { style: { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px' } }),
+                                    papyr.select(
+                                        papyr.option("Drama"),
+                                        papyr.option("Comedy"),
+                                        papyr.option("Thriller"),
+                                        { multiple: true, name: 'genres', size: 3 }
+                                    )
+                                )
+                            ),
+                            papyr.span("Multiline Textarea", { style: { fontSize: '0.75rem', color: '#94a3b8', marginBottom: '4px' } }),
+                            papyr.textarea({ name: 'review', cols: '30', rows: '3', style: { width: '100%', minHeight: '60px' }, placeholder: 'Write your book review here...' }),
+                            papyr.flex.row({ style: { gap: '15px', alignItems: 'center', margin: '5px 0' } },
+                                papyr.label(
+                                    papyr.input("checkbox", "subscribe", { name: 'newsletter', checked: true, style: { marginRight: '6px' } }),
+                                    papyr.span("Pre-checked Checkbox", { style: { fontSize: '0.8rem', color: '#cbd5e1' } })
+                                ),
+                                papyr.label(
+                                    papyr.input("checkbox", "sms", { name: 'sms', style: { marginRight: '6px' } }),
+                                    papyr.span("Standard Checkbox", { style: { fontSize: '0.8rem', color: '#cbd5e1' } })
+                                )
+                            ),
+                            papyr.flex.row({ style: { gap: '8px' } },
+                                papyr.input("submit", "Submit Review", { class: 'btn-primary', style: { fontSize: '0.8rem', padding: '6px 12px' } }),
+                                papyr.input("reset", "", { style: { background: 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' } })
+                            )
+                        )
+                    ),
+                    
+                    papyr.span("Tables Showcase:", { style: { fontSize: '0.85rem', color: '#94a3b8', display: 'block', margin: '18px 0 6px 0', fontWeight: 'bold' } }),
+                    papyr.table({ style: { width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', background: 'rgba(0,0,0,0.15)', borderRadius: '6px', overflow: 'hidden' } },
+                        papyr.tr({ style: { borderBottom: '1px solid rgba(255,255,255,0.08)' } },
+                            papyr.th("Book Title", { style: { padding: '8px', textAlign: 'left', color: '#14b8a6' } }),
+                            papyr.th("Author", { style: { padding: '8px', textAlign: 'left', color: '#14b8a6' } }),
+                            papyr.th("Price", { style: { padding: '8px', textAlign: 'left', color: '#14b8a6' } })
+                        ),
+                        papyr.tr({ style: { borderBottom: '1px solid rgba(255,255,255,0.04)' } },
+                            papyr.td("JavaScript Basics", { style: { padding: '8px', color: '#fff' } }),
+                            papyr.td("Jane Doe", { style: { padding: '8px', color: '#cbd5e1' } }),
+                            papyr.td("$19.99", { style: { padding: '8px', color: '#10b981' } })
+                        ),
+                        papyr.tr(
+                            papyr.td("HTML5 Mastery", { style: { padding: '8px', color: '#fff' } }),
+                            papyr.td("John Smith", { style: { padding: '8px', color: '#cbd5e1' } }),
+                            papyr.td("$24.99", { style: { padding: '8px', color: '#10b981' } })
+                        )
+                    ),
+                    
+                    papyr.span("Video Elements & Graphics:", { style: { fontSize: '0.85rem', color: '#94a3b8', display: 'block', margin: '18px 0 8px 0', fontWeight: 'bold' } }),
+                    papyr.flex.row({ style: { gap: '16px', flexWrap: 'wrap' } },
+                        papyr.div({ style: { flex: '1', minWidth: '200px' } },
+                            papyr.video({ controls: true, style: { width: '100%', maxHeight: '120px', background: '#000', borderRadius: '6px' } },
+                                papyr.source({ src: 'promo.mp4', type: 'video/mp4' }),
+                                papyr.track({ kind: 'subtitles', src: 'subtitles.vtt', srclang: 'en' })
+                            )
+                        ),
+                        papyr.div({ style: { flex: '1', minWidth: '200px', display: 'flex', alignItems: 'center' } },
+                            papyr.img({ src: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=200', alt: 'Book Cover', width: '80', height: '110', border: '1', align: 'left', style: { borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', marginRight: '10px' } }),
+                            papyr.p("Image attribute mapping renders height, width, border, and alternate text dynamically.", { style: { fontSize: '0.75rem', color: '#94a3b8', margin: '0' } })
+                        )
+                    )
+                )
+            );
+        } else if (tab === 'js') {
+            return papyr.flex.col({ style: { gap: '16px' } },
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Math & Numbers Solver", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
+                    papyr.flex.row({ style: { gap: '10px', alignItems: 'center', marginBottom: '12px' } },
+                        papyr.span("Input Number:", { style: { fontSize: '0.8rem', color: '#94a3b8' } }),
+                        papyr.input("number", "4.6", {
+                            style: { width: '80px' },
+                            oninput: (e) => mathNum.value = parseFloat(e.target.value) || 0
+                        })
+                    ),
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', fontSize: '0.78rem' } },
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("Math.PI: "),
+                            papyr.span(() => Math.PI.toFixed(4), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("Math.round: "),
+                            papyr.span(() => Math.round(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("Math.sqrt: "),
+                            papyr.span(() => Math.sqrt(Math.abs(mathNum.value)).toFixed(2), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("Math.floor: "),
+                            papyr.span(() => Math.floor(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("Math.ceil: "),
+                            papyr.span(() => Math.ceil(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
+                            papyr.span("toFixed(0): "),
+                            papyr.span(() => mathNum.value.toFixed(0), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        )
+                    )
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Arrays Interactive Sandbox", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
+                    papyr.p(() => "Current Array: [ " + arrayState.value.join(', ') + " ]", { style: { fontSize: '0.9rem', color: '#a7f3d0', fontWeight: 'bold', margin: '0 0 10px 0' } }),
+                    papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap' } },
+                        papyr.button("Push 'React'", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                let arr = [...arrayState.value];
+                                arr.push('React');
+                                arrayState.value = arr;
+                                papyr.toast("Pushed 'React'!", "info");
+                            }
+                        }),
+                        papyr.button("Pop Last", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
+                                let arr = [...arrayState.value];
+                                arr.pop();
+                                arrayState.value = arr;
+                                papyr.toast("Popped element!", "info");
+                            }
+                        }),
+                        papyr.button("Shift First", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
+                                let arr = [...arrayState.value];
+                                arr.shift();
+                                arrayState.value = arr;
+                                papyr.toast("Shifted element!", "info");
+                            }
+                        }),
+                        papyr.button("Unshift 'Node.js'", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                let arr = [...arrayState.value];
+                                arr.unshift('Node.js');
+                                arrayState.value = arr;
+                                papyr.toast("Unshifted 'Node.js'!", "info");
+                            }
+                        }),
+                        papyr.button("Reverse Array", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                let arr = [...arrayState.value];
+                                arr.reverse();
+                                arrayState.value = arr;
+                                papyr.toast("Reversed Array!", "info");
+                            }
+                        }),
+                        papyr.button("Sort Alphabetically", {
+                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                let arr = [...arrayState.value];
+                                arr.sort();
+                                arrayState.value = arr;
+                                papyr.toast("Sorted Array!", "info");
+                            }
+                        })
+                    )
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Strings, Dates & Errors Handler", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
+                    papyr.flex.row({ style: { gap: '16px', flexWrap: 'wrap' } },
+                        papyr.flex.col({ style: { flex: 1, minWidth: '220px', gap: '8px' } },
+                            papyr.span("String Operations:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
+                            papyr.input("text", stringVal.value, {
+                                oninput: (e) => stringVal.value = e.target.value
+                            }),
+                            papyr.flex.col({ style: { gap: '4px', fontSize: '0.78rem', color: '#cbd5e1' } },
+                                papyr.span(() => "Length: " + stringVal.value.length),
+                                papyr.span(() => "First Character (charAt 0): " + stringVal.value.charAt(0)),
+                                papyr.span(() => "Split array: " + JSON.stringify(stringVal.value.split(' ')))
+                            )
+                        ),
+                        papyr.flex.col({ style: { flex: 1, minWidth: '220px', gap: '8px' } },
+                            papyr.span("Dates Engine:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
+                            papyr.p(() => "Date Time: " + dateState.value, { style: { fontSize: '0.8rem', color: '#cbd5e1', margin: '0' } }),
+                            papyr.button("Refresh Timestamp", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem', width: 'fit-content' },
+                                onclick: () => {
+                                    let now = new Date();
+                                    dateState.value = now.toString();
+                                    papyr.toast("Timestamp Refreshed!", "success");
+                                }
+                            })
+                        )
+                    ),
+                    
+                    papyr.span("Error Boundary Validator:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', display: 'block', margin: '14px 0 6px 0' } }),
+                    papyr.flex.row({ style: { gap: '10px' } },
+                        papyr.button("Trigger Expected Error 💥", {
+                            style: { background: 'rgba(244, 63, 94, 0.15)', color: '#fda4af', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                            onclick: () => {
+                                try {
+                                    throw new Error("Book not found!");
+                                } catch (e) {
+                                    errorMsg.value = e.name + ": " + e.message;
+                                    papyr.toast("Caught custom error successfully!", "error");
+                                }
+                            }
+                        }),
+                        papyr.span(() => errorMsg.value ? "Caught Log: " + errorMsg.value : "Status: Purely safe. Zero errors thrown.", {
+                            style: () => ({
+                                fontSize: '0.78rem',
+                                color: errorMsg.value ? '#fda4af' : '#64748b',
+                                display: 'flex',
+                                alignItems: 'center'
+                            })
+                        })
+                    )
+                )
+            );
+        } else if (tab === 'css') {
+            return papyr.flex.col({ style: { gap: '16px' } },
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Display & Positioning Layout Rules", { style: { color: '#a855f7', margin: '0 0 12px 0' } }),
+                    papyr.p("Demonstrating complex CSS positions, display types, floats and box model layers dynamically.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 14px 0' } }),
+                    
+                    papyr.div({ style: { position: 'relative', width: '100%', height: '140px', background: 'rgba(0,0,0,0.3)', borderRadius: '6px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' } },
+                        papyr.div("z-index: 1 (Relative)", { style: { position: 'relative', top: '10px', left: '10px', zIndex: '1', width: '150px', background: '#a855f7', color: 'white', padding: '6px', borderRadius: '4px', fontSize: '0.75rem' } }),
+                        papyr.div("z-index: 2 (Absolute)", { style: { position: 'absolute', top: '25px', left: '40px', zIndex: '2', width: '150px', background: '#14b8a6', color: 'white', padding: '6px', borderRadius: '4px', fontSize: '0.75rem', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' } }),
+                        papyr.div({ style: { float: 'right', width: '80px', height: '60px', background: '#38bdf8', margin: '10px', padding: '6px', borderRadius: '4px', fontSize: '0.75rem', color: 'black', fontWeight: 'bold' } }, "Floated Element"),
+                        papyr.div("Clear element wraps beneath floats.", { style: { clear: 'both', padding: '10px 0 0 10px', fontSize: '0.75rem', color: '#cbd5e1' } })
+                    )
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Box Sizing Demonstration", { style: { color: '#a855f7', margin: '0 0 12px 0' } }),
+                    papyr.flex.row({ style: { gap: '16px', flexWrap: 'wrap' } },
+                        papyr.div({ style: { flex: 1, minWidth: '180px', border: '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '6px' } },
+                            papyr.span("border-box layout:", { style: { fontSize: '0.8rem', color: '#fff', fontWeight: 'bold', display: 'block', marginBottom: '6px' } }),
+                            papyr.div({ style: { boxSizing: 'border-box', width: '100%', padding: '15px', border: '5px solid #a855f7', background: 'rgba(255,255,255,0.03)', fontSize: '0.7rem', color: '#94a3b8' } },
+                                "Width includes 15px padding and 5px border inside."
+                            )
+                        ),
+                        papyr.div({ style: { flex: 1, minWidth: '180px', border: '1px solid rgba(255,255,255,0.1)', padding: '12px', borderRadius: '6px' } },
+                            papyr.span("content-box layout:", { style: { fontSize: '0.8rem', color: '#fff', fontWeight: 'bold', display: 'block', marginBottom: '6px' } }),
+                            papyr.div({ style: { boxSizing: 'content-box', width: '80%', padding: '15px', border: '5px solid #6366f1', background: 'rgba(255,255,255,0.03)', fontSize: '0.7rem', color: '#94a3b8' } },
+                                "Width excludes padding/border. Renders wider."
+                            )
+                        )
+                    )
+                ),
+                
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("Colors & Typography Preview", { style: { color: '#a855f7', margin: '0 0 12px 0' } }),
+                    papyr.flex.col({ style: { gap: '12px' } },
+                        papyr.flex.row({ style: { gap: '10px', flexWrap: 'wrap' } },
+                            papyr.div({ style: { width: '60px', height: '30px', background: 'hsl(280, 100%, 50%)', borderRadius: '4px' } }),
+                            papyr.div({ style: { width: '60px', height: '30px', background: 'rgba(20, 184, 166, 0.5)', borderRadius: '4px' } }),
+                            papyr.div({ style: { width: '60px', height: '30px', background: '#eab308', borderRadius: '4px' } }),
+                            papyr.div({ style: { width: '60px', height: '30px', background: 'rgb(244, 63, 94)', borderRadius: '4px' } })
+                        ),
+                        papyr.p("Typography hierarchy displaying line-height and font fallback logic.", { style: { fontStyle: 'italic', fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.6', fontFamily: "'Outfit', 'Roboto', sans-serif" } }),
+                        papyr.span("Fallback typography applies elegantly.", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: '700' } })
+                    )
+                )
+            );
+        } else if (tab === 'power') {
+            return papyr.flex.col({ style: { gap: '16px' } },
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("🔋 Real-time Power & Battery Diagnostics", { style: { color: '#f43f5e', margin: '0 0 10px 0' } }),
+                    papyr.p("This dynamic panel displays reactive states updated in real-time by the Energy-Aware Power Engine plugin.", { style: { fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' } },
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.25)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' } },
+                            papyr.span("Power Engine State", { style: { fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '6px' } }),
+                            papyr.span(() => papyr.power ? papyr.power.state.value.toUpperCase() : 'INACTIVE', {
+                                style: () => ({
+                                    fontSize: '1.25rem',
+                                    fontWeight: '800',
+                                    color: papyr.power && papyr.power.state.value === 'active' ? '#10b981' : (papyr.power && papyr.power.state.value === 'idle' ? '#eab308' : '#6366f1'),
+                                    textShadow: '0 0 10px currentColor'
+                                })
+                            })
+                        ),
+                        papyr.div({ style: { background: 'rgba(0,0,0,0.25)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', textAlign: 'center' } },
+                            papyr.span("Cooperative Target FPS", { style: { fontSize: '0.75rem', color: '#64748b', display: 'block', marginBottom: '6px' } }),
+                            papyr.span(() => (papyr.power ? papyr.power.fps.value : 60) + " FPS", {
+                                style: () => ({
+                                    fontSize: '1.25rem',
+                                    fontWeight: '800',
+                                    color: papyr.power && papyr.power.fps.value >= 60 ? '#10b981' : (papyr.power && papyr.power.fps.value > 0 ? '#eab308' : '#ef4444'),
+                                    textShadow: '0 0 10px currentColor'
+                                })
+                            })
+                        )
+                    )
+                ),
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("🎬 Cinematic Intent-First Hero Showcase", { style: { color: '#f43f5e', margin: '0 0 12px 0' } }),
+                    papyr.layout.hero({
+                        title: "cinematic computing",
+                        subtitle: "A modern, beautiful, and highly responsive user-experience powered entirely by tiny runtime engines.",
+                        theme: 'teal',
+                        glass: true,
+                        padding: '40px 20px',
+                        actions: [
+                            { text: "Primary Action", primary: true, attrs: { onclick: () => papyr.toast("Primary Action clicked!", "success") } },
+                            { text: "Secondary Link", primary: false, attrs: { onclick: () => papyr.toast("Secondary Action clicked!", "info") } }
+                        ]
+                    })
+                ),
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' } },
+                    papyr.h4("☄️ Tactile Spring Dynamics Physics Animations", { style: { color: '#f43f5e', margin: '0 0 12px 0' } }),
+                    papyr.p("Click and hover below to trigger zero-dependency spring physical rebounds natively.", { style: { fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    papyr.flex.row({ justify: 'center', gap: '15px' },
+                        papyr.button("Tactile Spring Bounce 🚀", {
+                            style: {
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, #f43f5e 0%, #be123c 100%)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                fontSize: '0.95rem',
+                                fontWeight: 'bold',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 15px rgba(244, 63, 94, 0.4)'
+                            },
+                            onmousedown: (e) => {
+                                papyr.animate.spring(e.target, { scale: 0.9 });
+                            },
+                            onmouseup: (e) => {
+                                papyr.animate.spring(e.target, { scale: 1.15 });
+                                setTimeout(() => {
+                                    papyr.animate.spring(e.target, { scale: 1.0 });
+                                }, 150);
+                                papyr.toast("Spring rebound simulated!", "success");
+                            },
+                            onmouseenter: (e) => {
+                                papyr.animate.spring(e.target, { scale: 1.08 });
+                            },
+                            onmouseleave: (e) => {
+                                papyr.animate.spring(e.target, { scale: 1.0 });
+                            }
+                        })
+                    )
+                )
+            );
+        } else {
+            return papyr.div("No tab selected");
+        }
     })
 );
 
@@ -345,7 +1131,16 @@ return typoEl;`;
                             papyr.button(".toolbar-btn:Conditional Render", { onclick: (e) => loadTemplate('conditional', e) }),
                             papyr.button(".toolbar-btn:Todo List", { onclick: (e) => loadTemplate('todo', e) }),
                             papyr.button(".toolbar-btn:Bootstrap", { onclick: (e) => loadTemplate('bootstrap', e) }),
-                            papyr.button(".toolbar-btn:Tailwind CSS", { onclick: (e) => loadTemplate('tailwind', e) })
+                            papyr.button(".toolbar-btn:Tailwind CSS", { onclick: (e) => loadTemplate('tailwind', e) }),
+                            papyr.button(".toolbar-btn:3D World", { onclick: (e) => loadTemplate('immersive', e) }),
+                            papyr.button(".toolbar-btn:Express SSR", { onclick: (e) => loadTemplate('ssr', e) }),
+                            papyr.button(".toolbar-btn:React / Next", { onclick: (e) => loadTemplate('react', e) }),
+                            papyr.button(".toolbar-btn:AI Semantic", { onclick: (e) => loadTemplate('ai', e) }),
+                            papyr.button(".toolbar-btn:Physics Sandbox", { onclick: (e) => loadTemplate('physics', e) }),
+                            papyr.button(".toolbar-btn:STEM Science", { onclick: (e) => loadTemplate('science', e) }),
+                            papyr.button(".toolbar-btn:System File", { onclick: (e) => loadTemplate('system', e) }),
+                            papyr.button(".toolbar-btn:AI Assistant", { onclick: (e) => loadTemplate('ai_chat', e) }),
+                            papyr.button(".toolbar-btn:Cheat Sheet Showcase", { onclick: (e) => loadTemplate('cheatsheet', e) })
                         )
                     ),
                     papyr.div(".editor-body",
@@ -1761,10 +2556,168 @@ console.log(token.user); // "admin"`,
         );
     };
 
+    const KernelDiagnostics = () => {
+        let refreshTick = papyr.state(0);
+        let intervalId = setInterval(() => {
+            refreshTick.value++;
+        }, 1000);
+
+        let performanceAlerts = papyr.state([]);
+        
+        if (papyr.diagnostics && typeof papyr.diagnostics.on === 'function') {
+            papyr.diagnostics.on('performance', (alert) => {
+                performanceAlerts.value = [...performanceAlerts.value, alert];
+            });
+        }
+
+        const safeStringify = (obj, space = 2) => {
+            const cache = new Set();
+            return JSON.stringify(obj, (key, value) => {
+                if (typeof value === 'object' && value !== null) {
+                    if (cache.has(value)) {
+                        return '[Circular]';
+                    }
+                    cache.add(value);
+                    if (value instanceof Element) {
+                        return `<${value.tagName.toLowerCase()}${value.id ? `#${value.id}` : ''}>`;
+                    }
+                }
+                return value;
+            }, space);
+        };
+
+        const rawEl = (tag, className, text, style = {}) => {
+            const el = document.createElement(tag);
+            if (className) {
+                if (className.startsWith('.')) className = className.slice(1);
+                el.className = className;
+            }
+            if (text) el.textContent = text;
+            Object.assign(el.style, style);
+            return el;
+        };
+
+        return papyr.div("#kernel-diagnostics.container", { 
+            style: { paddingTop: '6rem' },
+            onremove() {
+                clearInterval(intervalId);
+            }
+        },
+            papyr.h2(".section-title", { style: { display: 'inline-flex', alignItems: 'center', gap: '8px' } },
+                papyr.icon('settings', { size: 24, color: 'var(--teal)' }),
+                "Intelligent Kernel Diagnostics"
+            ),
+            papyr.p({ style: { color: 'var(--text-muted)', marginTop: '-1.5rem', marginBottom: '3rem', maxWidth: '600px' } },
+                "Monitor your decentralized runtime kernel in real-time. Inspect state maps, spellchecking warnings, loaded plugins, and structural component graphs directly."
+            ),
+            
+            papyr.div(".grid", { style: { gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' } },
+                papyr.div(".glass-panel", { style: { padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' } },
+                    papyr.h3("Loaded Core Plugins", { style: { color: '#fff', margin: '0' } }),
+                    papyr.ul({ style: { paddingLeft: '20px', margin: '0' } },
+                        () => {
+                            refreshTick.value;
+                            const plugins = papyr.plugins.list();
+                            if (plugins.length === 0) {
+                                return rawEl('li', '', "No active plugins loaded.", { color: 'var(--text-muted)' });
+                            }
+                            const items = [];
+                            plugins.forEach(p => {
+                                const li = rawEl('li', '', "", { color: 'var(--text-main)', marginBottom: '8px' });
+                                const strong = rawEl('strong', '', p.name, { color: 'var(--teal)' });
+                                li.appendChild(strong);
+                                li.appendChild(document.createTextNode(` (v${p.version || '1.0.0'})`));
+                                items.push(li);
+                            });
+                            return items;
+                        }
+                    ),
+
+                    papyr.h3("Component Registries Graph", { style: { color: '#fff', margin: '0', paddingTop: '1rem' } }),
+                    papyr.p({ style: { color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0' } },
+                        "Dynamic listing of active rendered elements currently tracked in the kernel:"
+                    ),
+                    papyr.div({ style: { maxHeight: '180px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)' } },
+                        papyr.ul({ style: { paddingLeft: '20px', margin: '0', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' } },
+                            () => {
+                                refreshTick.value;
+                                const comps = papyr.components.list();
+                                if (comps.length === 0) {
+                                    return rawEl('li', '', "No elements tracked yet.", { color: 'var(--text-muted)' });
+                                }
+                                const items = [];
+                                comps.slice(0, 10).forEach(c => {
+                                    const li = rawEl('li', '', `<${c.tag}${c.id ? ` id="${c.id}"` : ''}${c.classes ? ` class="${c.classes.split(' ').join('.')}"` : ''}>`, { color: '#cbd5e1' });
+                                    items.push(li);
+                                });
+                                return items;
+                            }
+                        )
+                    )
+                ),
+
+                papyr.div(".glass-panel", { style: { padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' } },
+                    papyr.h3("Live Warning Logs & Alerts", { style: { color: '#fff', margin: '0' } }),
+                    
+                    papyr.div({ style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
+                        () => {
+                            refreshTick.value;
+                            const errors = papyr.diagnostics.errors;
+                            const alerts = performanceAlerts.value;
+                            
+                            const items = [];
+                            
+                            if (alerts.length > 0) {
+                                alerts.forEach(a => {
+                                    const div = rawEl('div', '', `🚨 Performance: ${a.message}`, {
+                                        background: 'rgba(239, 68, 68, 0.15)', borderLeft: '3px solid #ef4444', padding: '8px 12px', borderRadius: '4px', fontSize: '0.85rem', color: '#fca5a5', marginBottom: '10px'
+                                    });
+                                    items.push(div);
+                                });
+                            }
+                            
+                            if (errors.length > 0) {
+                                errors.forEach(err => {
+                                    const isSelfHeal = err.type === 'self-heal-suggestion';
+                                    const div = rawEl('div', '', `${isSelfHeal ? '💡 Spellcheck' : '⚠️ Warning'}: ${err.message}`, {
+                                        background: isSelfHeal ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', 
+                                        borderLeft: `3px solid ${isSelfHeal ? '#10b981' : '#f59e0b'}`, 
+                                        padding: '8px 12px', 
+                                        borderRadius: '4px', 
+                                        fontSize: '0.85rem', 
+                                        color: isSelfHeal ? '#a7f3d0' : '#fde047',
+                                        marginBottom: '10px'
+                                    });
+                                    items.push(div);
+                                });
+                            }
+                            
+                            if (items.length === 0) {
+                                return rawEl('div', '', "Zero warnings or performance anomalies detected.", { color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' });
+                            }
+                            return items;
+                        }
+                    ),
+
+                    papyr.h3("Reactive Context Export Dump", { style: { color: '#fff', margin: '0', paddingTop: '1rem' } }),
+                    papyr.pre({ style: { margin: '0', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.02)' } },
+                        papyr.code({ style: { fontFamily: 'var(--font-mono)', color: '#a5b4fc', fontSize: '0.78rem', whiteSpace: 'pre-wrap' } },
+                            () => {
+                                refreshTick.value;
+                                return safeStringify(papyr.exportContext(), 2);
+                            }
+                        )
+                    )
+                )
+            )
+        );
+    };
+
 const MainApp = () => {
         return papyr.fragment(
             Hero(),
             SandboxStudio(),
+            KernelDiagnostics(),
             RouterDemo(),
             ComponentCatalog(),
             ReactiveMathStudio(),

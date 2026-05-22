@@ -1,8 +1,10 @@
 /**
- * PAPER API HELPERS
+ * PAPYR API HELPERS
  * Simplifies standard fetch() commands for beginners.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
-(function() {
+
+coreInitializers.push((papyr) => {
     papyr.api = {
         /**
          * Perform an async GET request
@@ -19,7 +21,7 @@
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                papyr.warn(`papyr.api.get failed for ${url}`, error);
+                if (papyr.warn) papyr.warn(`papyr.api.get failed for ${url}`, error);
                 throw error;
             }
         },
@@ -41,9 +43,9 @@
                 if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
                 return await response.json();
             } catch (error) {
-                papyr.warn(`papyr.api.post failed for ${url}`, error);
+                if (papyr.warn) papyr.warn(`papyr.api.post failed for ${url}`, error);
                 throw error;
             }
         }
     };
-})();
+});

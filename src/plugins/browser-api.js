@@ -1,5 +1,5 @@
 /**
- * PAPER NATIVE BROWSER APIs
+ * PAPYR NATIVE BROWSER APIs
  * Simplifies access to native device hardware and browser APIs.
  */
 (function() {

@@ -1,5 +1,5 @@
 /**
- * PAPER PARTICLES ENGINE
+ * PAPYR PARTICLES ENGINE
  * High-performance, zero-dependency HTML5 Canvas Particle System.
  */
 (function() {
@@ -54,7 +54,6 @@
             }
             ctx.fill();
             update();
-            requestAnimationFrame(render);
         };
 
         const update = () => {
@@ -76,12 +75,23 @@
             }
         };
 
+        let stopThrottle = null;
+
         // Mount hook
         setTimeout(() => {
             resize();
             initParticles();
             window.addEventListener('resize', () => { resize(); initParticles(); });
-            render();
+            
+            if (papyr.power && typeof papyr.power.throttle === 'function') {
+                stopThrottle = papyr.power.throttle(render);
+            } else {
+                const legacyLoop = () => {
+                    render();
+                    requestAnimationFrame(legacyLoop);
+                };
+                requestAnimationFrame(legacyLoop);
+            }
         }, 50);
 
         return canvas;

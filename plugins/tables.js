@@ -1,4 +1,4 @@
-// PAPER TABLES PLUGIN
+// PAPYR TABLES PLUGIN
 // Custom plugin for simple automated data grids and tables
 
 function tablePlugin(paper) {

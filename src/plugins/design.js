@@ -1,5 +1,5 @@
 /**
- * PAPER DESIGN ENGINE
+ * PAPYR DESIGN ENGINE
  * Advanced, responsive layout and aesthetic helpers.
  */
 (function() {

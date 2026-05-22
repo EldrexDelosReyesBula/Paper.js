@@ -1,5 +1,5 @@
 /**
- * PAPER UI COMPONENTS
+ * PAPYR UI COMPONENTS
  * Cinematic, interactive UI elements (Toasts, Modals, Sheets).
  */
 (function() {

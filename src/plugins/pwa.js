@@ -1,5 +1,5 @@
 /**
- * PAPER PWA ENGINE
+ * PAPYR PWA ENGINE
  * One-line registration for Progressive Web App Service Workers.
  */
 (function() {

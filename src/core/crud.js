@@ -1,5 +1,5 @@
 /**
- * PAPER CRUD STORAGE ENGINE
+ * PAPYR CRUD STORAGE ENGINE
  * 
  * Auto-synchronizing reactive database store mapped directly to persistent LocalStorage.
  */

@@ -591,7 +591,7 @@
     // ==========================================
     // 4. Pre-built Components
     // ==========================================
-    papyr.components = {
+    Object.assign(papyr.components, {
         navbar: (logo, links) => {
             let nav = papyr.nav('.navbar');
             let navLinks = papyr.div('.nav-links');
@@ -704,8 +704,7 @@
                 current = (current + 1) % images.length;
                 updateCarousel();
             };
-            
             return container;
         }
-    };
+    });
 })();

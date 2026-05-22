@@ -1,10 +1,11 @@
 /**
- * PAPER MATHEMATICAL LOGIC SYSTEM
+ * PAPYR MATHEMATICAL LOGIC SYSTEM
  * 
  * Auto-updating computed mathematical operations accepting standard numbers or reactive state nodes.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
 
-(function() {
+coreInitializers.push((papyr) => {
     const flatten = (arr) => arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatten(val) : val), []);
     const getVal = (x) => (x && typeof x.subscribe === 'function' ? x.value : Number(x || 0));
 
@@ -70,4 +71,4 @@
             return Math.round(v * factor) / factor;
         })
     };
-})();
+});

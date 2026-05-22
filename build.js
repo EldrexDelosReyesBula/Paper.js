@@ -16,15 +16,26 @@ const coreFiles = [
 ];
 const pluginFiles = [
     'plugins/official.js',
+    'plugins/kernel-plugins.js',
     'plugins/animate.js',
     'plugins/charts.js',
     'plugins/browser-api.js',
     'plugins/pwa.js',
     'plugins/design.js',
+    'plugins/power.js',
     'plugins/particles.js',
     'plugins/ui-components.js',
     'plugins/watt.js',
-    'plugins/layout.js'
+    'plugins/layout.js',
+    'plugins/immersive.js',
+    'plugins/integrations.js',
+    'plugins/system.js',
+    'plugins/ml.js',
+    'plugins/ocr.js',
+    'plugins/physics.js',
+    'plugins/ai.js',
+    'plugins/pdf.js',
+    'plugins/science.js'
 ];
 const stylesFile = 'styles/complete.css';
 

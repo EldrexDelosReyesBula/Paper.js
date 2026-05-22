@@ -1,5 +1,5 @@
 /**
- * PAPER CHARTS
+ * PAPYR CHARTS
  * Zero-dependency HTML5 Canvas charting plugin.
  */
 (function() {

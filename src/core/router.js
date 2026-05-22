@@ -1,8 +1,10 @@
 /**
- * PAPER ROUTER
+ * PAPYR ROUTER
  * Zero-configuration Hash SPA Router.
+ * Updated to run modularly inside the Papyr Kernel context.
  */
-(function() {
+
+coreInitializers.push((papyr) => {
     let routes = [];
     let currentView = papyr.state(null);
     let pathParams = papyr.state({});
@@ -21,6 +23,9 @@
             keys: (cleanPath.match(/:\w+/g) || []).map(k => k.slice(1)),
             componentFn
         });
+        
+        // Attach to runtime context for context export APIs
+        papyr.runtime.routes = routes;
     };
 
     /**
@@ -96,5 +101,4 @@
 
         return routeNode;
     };
-
-})();
+});

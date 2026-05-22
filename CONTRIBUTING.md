@@ -100,6 +100,8 @@ simpler, more expressive, and beginner-friendly.
 If Papyr.js helped you build, learn, or prototype faster,
 you can support the project here:
 
+https://www.paypal.com/ncp/payment/FXUVK7HA9E6M2
+
 <a href="https://www.paypal.com/ncp/payment/FXUVK7HA9E6M2"
    target="_blank"
    style="
@@ -120,7 +122,7 @@ you can support the project here:
 </a>
 
 Papyr.js is developed independently to help students,
-designers and developers build modern web experiences faster.
+designers, and developers build modern web experiences faster.
 
 Supporting the project helps improve:
 - Documentation

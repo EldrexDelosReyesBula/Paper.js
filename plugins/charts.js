@@ -1,4 +1,4 @@
-// PAPER CHARTS PLUGIN
+// PAPYR CHARTS PLUGIN
 // Exquisite micro-charts plugin to draw progress rings and bar charts using pure HTML5 Canvas
 
 function chartsPlugin(paper) {

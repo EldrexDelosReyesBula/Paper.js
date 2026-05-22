@@ -1,11 +1,20 @@
-# papyr.py# High-speed dev companion scaffolder and local dev server for Papyr.js# Designed with a Gen Z aesthetic, clean diagnostics, and lightning speeds.
+# papyr.py
+# High-speed dev companion scaffolder and local dev server for Papyr.js
+# Designed with a Gen Z aesthetic, clean diagnostics, and lightning speeds.
 import os
 import sys
 import http.server
 import socketserver
 import webbrowser
 
-# Terminal colors using ANSI codesTEAL = "\033[36m"
+# Force UTF-8 stdout/stderr encoding for Windows compatibility with high-Unicode emojis
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
+# Terminal colors using ANSI codes
+TEAL = "\033[36m"
 INDIGO = "\033[38;5;99m"
 AMBER = "\033[33m"
 GREEN = "\033[32m"
@@ -13,13 +22,16 @@ RED = "\033[31m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
 
-# Custom Request Handler to force JavaScript MIME type correctly on Windowsclass PaperRequestHandler(http.server.SimpleHTTPRequestHandler):
+# Custom Request Handler to force JavaScript MIME type correctly on Windows
+class PaperRequestHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
-        # Enable CORS for quick CDN mockings if needed        self.send_header('Access-Control-Allow-Origin', '*')
+        # Enable CORS for quick CDN mockings if needed
+        self.send_header('Access-Control-Allow-Origin', '*')
         super().end_headers()
 
     def guess_type(self, path):
-        # Prevent Windows Registry from forcing text/plain on .js or .css files        if path.endswith('.js'):
+        # Prevent Windows Registry from forcing text/plain on .js or .css files
+        if path.endswith('.js'):
             return 'application/javascript'
         if path.endswith('.css'):
             return 'text/css'
@@ -36,7 +48,8 @@ def serve_dev(port=8000):
     print(f"{TEAL}============================={RESET}")
     print(f"Press {RED}Ctrl+C{RESET} to terminate the server.\n")
 
-    # Automatically launch default browser    try:
+    # Automatically launch default browser
+    try:
         webbrowser.open(f"http://localhost:{port}")
     except Exception:
         pass
@@ -193,7 +206,8 @@ def scaffold_init(app_name):
 
     os.makedirs(app_name)
 
-    # 1. Create index.html    html_content = """<!DOCTYPE html>
+    # 1. Create index.html
+    html_content = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -216,7 +230,8 @@ def scaffold_init(app_name):
     with open(os.path.join(app_name, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_content)
 
-    # 2. Create styles.css    css_content = """/* Custom starter stylesheet for Paper.js */
+    # 2. Create styles.css
+    css_content = """/* Custom starter stylesheet for Paper.js */
 :root {
     --bg: #070913;
     --bg-card: rgba(16, 22, 42, 0.65);
@@ -297,7 +312,8 @@ body::before {
     with open(os.path.join(app_name, "styles.css"), "w", encoding="utf-8") as f:
         f.write(css_content)
 
-    # 3. Create app.js    js_content = """// Custom starting code with Paper.js state and computing
+    # 3. Create app.js
+    js_content = """// Custom starting code with Paper.js state and computing
 let count = paper.state(0);
 let double = paper.computed(() => count.value * 2);
 
