@@ -1,5 +1,4 @@
-<img width="2100" height="1103" alt="Paper.js banner" src="https://github.com/user-attachments/assets/712b968d-4f1e-4a59-946e-c70cca126c0a" />
-
+<img width="1650" height="866" alt="Papyr.js banner" src="https://github.com/user-attachments/assets/b72e2615-0db3-4885-a424-a3ef1d094548" />
 
 # Paper.js - HTML made stupid simple 
 > **Write HTML like you're writing a text message.**
