@@ -10,7 +10,7 @@
 
 Papyrus is an ultra-lightweight, blazing-fast JavaScript library designed to build modern interactive HTML interfaces with absolute zero complexity and zero terminal setups. By bypassing the Virtual DOM, Papyrus delivers direct DOM manipulation with reactive state tracking, enterprise-grade security, and a delightfully simple API.
 
-**Papyrus v3.0** introduces a state-of-the-art **Agile Modular Architecture**, featuring automatic dependency-tracking reactivity, built-in enterprise vault encryption, HTML5 SPA routing, reactive mathematical computations, and advanced physics-based animations—all without a single npm dependency.
+**Papyrus v2.0** introduces a state-of-the-art **Agile Modular Architecture**, featuring automatic dependency-tracking reactivity, built-in enterprise vault encryption, HTML5 SPA routing, reactive mathematical computations, and advanced physics-based animations—all without a single npm dependency.
 
 ---
 
