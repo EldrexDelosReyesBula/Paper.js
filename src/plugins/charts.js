@@ -3,11 +3,11 @@
  * Zero-dependency HTML5 Canvas charting plugin.
  */
 (function() {
-    paper.chart = (config) => {
+    papyr.chart = (config) => {
         let canvas = document.createElement('canvas');
         let ctx = canvas.getContext('2d');
         
-        let container = paper.div('.paper-chart-container', canvas, Object.assign({
+        let container = papyr.div('.papyr-chart-container', canvas, Object.assign({
             style: { position: 'relative', width: '100%', height: '300px' }
         }, config.attrs || {}));
 

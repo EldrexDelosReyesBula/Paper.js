@@ -1,5 +1,5 @@
 // test-runner.js
-// A lightweight mocked browser context runner to inspect runtime errors in paper-complete.js and app.js
+// A lightweight mocked browser context runner to inspect runtime errors in papyr-complete.js and app.js
 
 const fs = require('fs');
 const path = require('path');
@@ -140,23 +140,23 @@ global.MutationObserver = class MutationObserver {
     disconnect() {}
 };
 
-console.log("Loading paper-complete.js...");
+console.log("Loading papyr-complete.js...");
 try {
-    const paperCompleteCode = fs.readFileSync(path.join(__dirname, 'paper-complete.js'), 'utf8');
+    const paperCompleteCode = fs.readFileSync(path.join(__dirname, 'papyr-complete.js'), 'utf8');
     eval(paperCompleteCode);
-    console.log("paper-complete.js loaded successfully!");
+    console.log("papyr-complete.js loaded successfully!");
 } catch (e) {
-    console.error("Error loading paper-complete.js:", e);
+    console.error("Error loading papyr-complete.js:", e);
     process.exit(1);
 }
 
-console.log("Loading paper-plugins.js...");
+console.log("Loading papyr-plugins.js...");
 try {
-    const paperPluginsCode = fs.readFileSync(path.join(__dirname, 'paper-plugins.js'), 'utf8');
+    const paperPluginsCode = fs.readFileSync(path.join(__dirname, 'papyr-plugins.js'), 'utf8');
     eval(paperPluginsCode);
-    console.log("paper-plugins.js loaded successfully!");
+    console.log("papyr-plugins.js loaded successfully!");
 } catch (e) {
-    console.error("Error loading paper-plugins.js:", e);
+    console.error("Error loading papyr-plugins.js:", e);
     process.exit(1);
 }
 

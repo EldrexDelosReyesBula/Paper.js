@@ -3,32 +3,32 @@
  * Seamlessly integrates LocalStorage, SessionStorage, IndexedDB, and SQLite endpoints.
  */
 
-paper.db = (collectionName, engine = 'local') => {
+papyr.db = (collectionName, engine = 'local') => {
     
     // Engine Drivers
     const drivers = {
         'local': {
             get: () => {
-                try { return JSON.parse(localStorage.getItem(`paper_db_${collectionName}`)) || []; } 
+                try { return JSON.parse(localStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
                 catch(e) { return []; }
             },
-            set: (data) => localStorage.setItem(`paper_db_${collectionName}`, JSON.stringify(data))
+            set: (data) => localStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
         },
         'session': {
             get: () => {
-                try { return JSON.parse(sessionStorage.getItem(`paper_db_${collectionName}`)) || []; } 
+                try { return JSON.parse(sessionStorage.getItem(`papyr_db_${collectionName}`)) || []; } 
                 catch(e) { return []; }
             },
-            set: (data) => sessionStorage.setItem(`paper_db_${collectionName}`, JSON.stringify(data))
+            set: (data) => sessionStorage.setItem(`papyr_db_${collectionName}`, JSON.stringify(data))
         },
         'firebase': {
-            // Firebase hollow bridge (requires paper.firebase to be initialized by user)
+            // Firebase hollow bridge (requires papyr.firebase to be initialized by user)
             get: () => [], // Handled async in real implementation
             set: (data) => {
-                if (paper.firebase && paper.firebase.db) {
-                    paper.firebase.db(collectionName).set(data);
+                if (papyr.firebase && papyr.firebase.db) {
+                    papyr.firebase.db(collectionName).set(data);
                 } else {
-                    console.warn("PaperDB: Firebase engine selected but paper.firebase is not initialized.");
+                    console.warn("PaperDB: Firebase engine selected but papyr.firebase is not initialized.");
                 }
             }
         },
@@ -36,13 +36,13 @@ paper.db = (collectionName, engine = 'local') => {
             // SQLite hollow bridge (requires sql.js or similar)
             get: () => [],
             set: (data) => {
-                if (paper.sqlite) paper.sqlite.insert(collectionName, data);
+                if (papyr.sqlite) papyr.sqlite.insert(collectionName, data);
             }
         }
     };
 
     let driver = drivers[engine] || drivers['local'];
-    let state = paper.state(driver.get());
+    let state = papyr.state(driver.get());
 
     // Watchers for reactivity
     let watchers = [];
@@ -92,12 +92,12 @@ paper.db = (collectionName, engine = 'local') => {
 };
 
 // Aliases for standard unified access
-paper.storage = {
+papyr.storage = {
     set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
     get: (k) => JSON.parse(localStorage.getItem(k))
 };
 
-paper.session = {
+papyr.session = {
     set: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)),
     get: (k) => JSON.parse(sessionStorage.getItem(k))
 };

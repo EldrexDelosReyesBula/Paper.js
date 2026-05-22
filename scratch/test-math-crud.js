@@ -1,5 +1,5 @@
 // scratch/test-math-crud.js
-// Isolated automated verification suite for paper.math and paper.crud modules.
+// Isolated automated verification suite for papyr.math and papyr.crud modules.
 
 const fs = require('fs');
 const path = require('path');
@@ -46,8 +46,8 @@ global.document = {
     }
 };
 
-// Load compiled paper.js
-const paperCode = fs.readFileSync(path.join(__dirname, '..', 'paper.js'), 'utf8');
+// Load compiled papyr.js
+const paperCode = fs.readFileSync(path.join(__dirname, '..', 'papyr.js'), 'utf8');
 eval(paperCode);
 
 console.log("--------------------------------------------------");
@@ -55,12 +55,12 @@ console.log("⚡ STARTING AUTOMATED ASSERTIONS FOR MATHEMATICS MODULE");
 console.log("--------------------------------------------------");
 
 // Define reactive state variables
-let A = paper.state(10);
-let B = paper.state(5);
-let C = paper.state(2);
+let A = papyr.state(10);
+let B = papyr.state(5);
+let C = papyr.state(2);
 
 // 1. Assert sum
-let sumResult = paper.math.sum(A, B, C);
+let sumResult = papyr.math.sum(A, B, C);
 console.log(`Initial Sum value: ${sumResult.value} (Expected: 17)`);
 console.assert(sumResult.value === 17, `Expected sum 17, got ${sumResult.value}`);
 
@@ -70,7 +70,7 @@ console.log(`Updated Variable A to 20. New Sum: ${sumResult.value} (Expected: 27
 console.assert(sumResult.value === 27, `Expected sum 27, got ${sumResult.value}`);
 
 // 2. Assert sub
-let subResult = paper.math.sub(A, B);
+let subResult = papyr.math.sub(A, B);
 console.log(`Subtraction (A - B): ${subResult.value} (Expected: 15)`);
 console.assert(subResult.value === 15, `Expected subtraction 15, got ${subResult.value}`);
 
@@ -79,7 +79,7 @@ console.log(`Updated Variable B to 12. New Subtraction: ${subResult.value} (Expe
 console.assert(subResult.value === 8, `Expected subtraction 8, got ${subResult.value}`);
 
 // 3. Assert mul
-let mulResult = paper.math.mul(A, B, C);
+let mulResult = papyr.math.mul(A, B, C);
 console.log(`Multiplication (A * B * C): ${mulResult.value} (Expected: 480)`);
 console.assert(mulResult.value === 480, `Expected multiplication 480, got ${mulResult.value}`);
 
@@ -88,7 +88,7 @@ console.log(`Updated Variable C to 5. New Multiplication: ${mulResult.value} (Ex
 console.assert(mulResult.value === 1200, `Expected multiplication 1200, got ${mulResult.value}`);
 
 // 4. Assert div
-let divResult = paper.math.div(A, C);
+let divResult = papyr.math.div(A, C);
 console.log(`Division (A / C): ${divResult.value} (Expected: 4)`);
 console.assert(divResult.value === 4, `Expected division 4, got ${divResult.value}`);
 
@@ -100,18 +100,18 @@ console.assert(divResult.value === 0, `Expected division to handle zero denomina
 C.value = 4;
 
 // 5. Assert avg
-let avgResult = paper.math.avg(A, B, C);
+let avgResult = papyr.math.avg(A, B, C);
 console.log(`Average of (20, 12, 4): ${avgResult.value} (Expected: 12)`);
 console.assert(avgResult.value === 12, `Expected average 12, got ${avgResult.value}`);
 
 // 6. Assert percent
-let percentResult = paper.math.percent(B, A);
+let percentResult = papyr.math.percent(B, A);
 console.log(`Percentage (12 of 20): ${percentResult.value}% (Expected: 60%)`);
 console.assert(percentResult.value === 60, `Expected percentage 60, got ${percentResult.value}`);
 
 // 7. Assert round
-let preciseValue = paper.state(3.14159265);
-let roundResult = paper.math.round(preciseValue, 3);
+let preciseValue = papyr.state(3.14159265);
+let roundResult = papyr.math.round(preciseValue, 3);
 console.log(`Rounded Value (3.14159265 to 3 decimals): ${roundResult.value} (Expected: 3.142)`);
 console.assert(roundResult.value === 3.142, `Expected rounded value 3.142, got ${roundResult.value}`);
 
@@ -130,7 +130,7 @@ const initialDevs = [
     { name: "John Doe", role: "Developer" },
     { name: "Jane Smith", role: "Designer" }
 ];
-const db = paper.crud("test-db-store", initialDevs);
+const db = papyr.crud("test-db-store", initialDevs);
 
 // Verify initial read
 console.log(`Initial items in store: ${db.items.value.length} (Expected: 2)`);
@@ -172,7 +172,7 @@ mockStorageStore["persistence-test"] = JSON.stringify([
     { id: "x1", name: "Persistent Agent", role: "Verifier" }
 ]);
 
-const persistentDb = paper.crud("persistence-test", []);
+const persistentDb = papyr.crud("persistence-test", []);
 console.log(`Restored persistent data store size: ${persistentDb.items.value.length} (Expected: 1)`);
 console.assert(persistentDb.items.value.length === 1, `Expected 1 record restored from cache, got ${persistentDb.items.value.length}`);
 console.assert(persistentDb.items.value[0].name === "Persistent Agent", "Restored record name mismatch");

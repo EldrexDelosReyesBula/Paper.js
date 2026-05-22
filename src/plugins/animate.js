@@ -3,7 +3,7 @@
  * Zero-dependency hardware-accelerated animation engine.
  */
 (function() {
-    // Styles are bundled natively via build.js into paper-complete-styles
+    // Styles are bundled natively via build.js into papyr-complete-styles
 
     const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
@@ -33,15 +33,29 @@
         }, { threshold: 0.1 });
     }
 
-    // Override paper-core.js to intercept 'animate' attribute
-    const originalPaper = window.paper;
+    // Override papyr-core.js to intercept 'animate' attribute
+    const originalPapyr = window.papyr;
     if (originalPaper) {
-        // We will monkey-patch the original paper function or use a plugin hook
-        // Since paper is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
-        // Actually, the easiest way is to add a hook in paper-core.js. 
+        // We will monkey-patch the original papyr function or use a plugin hook
+        // Since papyr is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
+        // Actually, the easiest way is to add a hook in papyr-core.js. 
         // But to keep it self-contained, we can observe the DOM for [data-animate] or [animate].
-        // Alternatively, since paper-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
+        // Alternatively, since papyr-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
         
+        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop'];
+        const levenshtein = (a, b) => {
+            const matrix = [];
+            for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++) {
+                for (let j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) == a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
+                    else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+                }
+            }
+            return matrix[b.length][a.length];
+        };
+
         let mo = new MutationObserver(mutations => {
             if (prefersReducedMotion) return;
             mutations.forEach(m => {
@@ -51,9 +65,27 @@
                         elements.forEach(el => {
                             if (el.hasAttribute('animate') && observer) {
                                 let animType = el.getAttribute('animate');
+
+                                // Spell check animation
+                                if (!VALID_ANIMATIONS.includes(animType)) {
+                                    let closest = '';
+                                    let minDistance = Infinity;
+                                    for (let valid of VALID_ANIMATIONS) {
+                                        let d = levenshtein(animType, valid);
+                                        if (d < minDistance) {
+                                            minDistance = d;
+                                            closest = valid;
+                                        }
+                                    }
+                                    if (minDistance <= 3) {
+                                        console.error(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`);
+                                        if (papyr.toast) papyr.toast(`PapyrError: Unknown animation "${animType}". Did you mean "${closest}"?`, 'error');
+                                    }
+                                }
+
                                 el.dataset.animate = animType;
                                 el.removeAttribute('animate'); // Clean DOM
-                                el.classList.add('paper-animate-base');
+                                el.classList.add('papyr-animate-base');
                                 observer.observe(el);
                             }
                         });
@@ -67,3 +99,78 @@
         }
     }
 })();
+
+    // PAPER PARALLAX ENGINE
+    papyr.parallax = (selector, speed = 0.5) => {
+        if (typeof window === 'undefined') return;
+        window.addEventListener('scroll', () => {
+            const elements = document.querySelectorAll(selector);
+            let scrollY = window.scrollY;
+            elements.forEach(el => {
+                let yPos = -(scrollY * speed);
+                el.style.transform = 	ranslateY(px);
+            });
+        });
+    };
+
+    // PAPER PHYSICS ENGINE
+    papyr.physics = (options = {}) => {
+        const { gravity = 0.98, bounce = 0.8, friction = 0.95 } = options;
+        return (el) => {
+            if (!el || typeof window === 'undefined') return el;
+            
+            let y = 0, vy = 0;
+            let isDragging = false;
+            let animationFrame;
+
+            const update = () => {
+                if (!isDragging) {
+                    vy += gravity;
+                    y += vy;
+                    
+                    // Simple floor collision bounds based on parent
+                    let parentHeight = el.parentElement ? el.parentElement.clientHeight : window.innerHeight;
+                    let floor = parentHeight - el.offsetHeight;
+                    
+                    if (y > floor) {
+                        y = floor;
+                        vy *= -bounce;
+                        // Apply friction on bounce
+                        vy *= friction;
+                    }
+                    
+                    el.style.transform = 	ranslateY(px);
+                }
+                animationFrame = requestAnimationFrame(update);
+            };
+            
+            // Allow drag to drop
+            el.style.cursor = 'grab';
+            el.addEventListener('mousedown', () => {
+                isDragging = true;
+                el.style.cursor = 'grabbing';
+            });
+            window.addEventListener('mouseup', () => {
+                if (isDragging) {
+                    isDragging = false;
+                    el.style.cursor = 'grab';
+                    vy = 0; // Reset velocity on drop
+                }
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    y += e.movementY;
+                    el.style.transform = 	ranslateY(px);
+                }
+            });
+
+            // Start loop on next tick to allow DOM mount
+            setTimeout(() => {
+                let initialBounds = el.getBoundingClientRect();
+                y = initialBounds.top || 0;
+                update();
+            }, 50);
+            
+            return el;
+        };
+    };

@@ -42,21 +42,21 @@ global.document = {
     }
 };
 
-// Load paper.js
-const paperCode = fs.readFileSync(path.join(__dirname, '..', 'paper.js'), 'utf8');
+// Load papyr.js
+const paperCode = fs.readFileSync(path.join(__dirname, '..', 'papyr.js'), 'utf8');
 eval(paperCode);
 
 console.log("Asserting combined selector parsing...");
 // Test combined selector #my-id.class1.class2
 mockClassesAdded.length = 0;
-const el1 = paper.div("#my-id.class1.class2");
+const el1 = papyr.div("#my-id.class1.class2");
 console.assert(el1.id === "my-id", `Expected ID to be 'my-id', got '${el1.id}'`);
 console.assert(mockClassesAdded.includes("class1"), "Expected class1 to be added");
 console.assert(mockClassesAdded.includes("class2"), "Expected class2 to be added");
 
 console.log("Asserting selector with colon parsing...");
 mockClassesAdded.length = 0;
-const el2 = paper.div("#my-id.class1.class2:Hello World");
+const el2 = papyr.div("#my-id.class1.class2:Hello World");
 console.assert(el2.id === "my-id", `Expected ID to be 'my-id', got '${el2.id}'`);
 console.assert(mockClassesAdded.includes("class1"), "Expected class1 to be added");
 console.assert(mockClassesAdded.includes("class2"), "Expected class2 to be added");
@@ -64,16 +64,16 @@ console.assert(el2.children[0].textContent === "Hello World", `Expected children
 
 console.log("Asserting null argument check...");
 try {
-    const elNull = paper.div(null);
+    const elNull = papyr.div(null);
     console.log("Null argument handled safely without crash!");
 } catch (e) {
-    console.error("FAIL: paper(null) threw error:", e);
+    console.error("FAIL: papyr(null) threw error:", e);
     process.exit(1);
 }
 
-console.log("Asserting paper.icon setAttribute class...");
+console.log("Asserting papyr.icon setAttribute class...");
 mockAttributesSet.class = undefined;
-const iconEl = paper.icon('bolt', { class: 'my-icon' });
+const iconEl = papyr.icon('bolt', { class: 'my-icon' });
 console.assert(mockAttributesSet.class === 'my-icon', `Expected class 'my-icon' set via setAttribute, got '${mockAttributesSet.class}'`);
 
 console.log("All custom assertions passed successfully!");

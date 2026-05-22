@@ -1,9 +1,9 @@
 /**
  * PAPER ORM SYSTEM
- * Object-Relational Mapping for Paper.js
+ * Object-Relational Mapping for Papyr.js
  */
 
-class PaperModel {
+class PapyrModel {
     constructor(data = {}) {
         Object.assign(this, data);
     }
@@ -12,9 +12,9 @@ class PaperModel {
     save() {
         const cname = this.constructor.name.toLowerCase() + 's';
         if (this.id) {
-            paper.db(cname).update(this.id, this);
+            papyr.db(cname).update(this.id, this);
         } else {
-            let record = paper.db(cname).insert(this);
+            let record = papyr.db(cname).insert(this);
             this.id = record.id;
         }
         return this;
@@ -24,7 +24,7 @@ class PaperModel {
     delete() {
         const cname = this.constructor.name.toLowerCase() + 's';
         if (this.id) {
-            paper.db(cname).delete(this.id);
+            papyr.db(cname).delete(this.id);
         }
     }
 
@@ -36,22 +36,22 @@ class PaperModel {
 
     static find(id) {
         const cname = this.name.toLowerCase() + 's';
-        const data = paper.db(cname).find(id);
+        const data = papyr.db(cname).find(id);
         return data ? new this(data) : null;
     }
 
     static all() {
         const cname = this.name.toLowerCase() + 's';
-        return paper.db(cname).state.value.map(data => new this(data));
+        return papyr.db(cname).state.value.map(data => new this(data));
     }
 
     static watch(callback) {
         const cname = this.name.toLowerCase() + 's';
-        return paper.db(cname).watch(dataList => {
+        return papyr.db(cname).watch(dataList => {
             callback(dataList.map(data => new this(data)));
         });
     }
 }
 
 // Global exposure
-paper.model = PaperModel;
+papyr.model = PapyrModel;

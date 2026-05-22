@@ -10,7 +10,7 @@
  * @param {*} val Initial reactive state value
  * @returns {PaperState} Reactive State accessor interface
  */
-paper.state = (val) => {
+papyr.state = (val) => {
     let subscribers = new Set();
     return {
         get value() {
@@ -35,7 +35,7 @@ paper.state = (val) => {
  * @param {function} fn Tracked callback evaluating state operations
  * @returns {PaperComputed} Read-only tracking interface
  */
-paper.computed = (fn) => {
+papyr.computed = (fn) => {
     let subscribers = new Set();
     let currentVal;
     let effect = () => {
@@ -68,8 +68,8 @@ paper.computed = (fn) => {
  * @param {HTMLElement|function} [falseVal] Optional target when state is falsy
  * @returns {HTMLDivElement} Content container fragment
  */
-paper.if = (conditionState, trueVal, falseVal) => {
-    let container = paper.div({ style: { display: 'contents' } });
+papyr.if = (conditionState, trueVal, falseVal) => {
+    let container = papyr.div({ style: { display: 'contents' } });
     let currentEl = null;
     
     let update = (val) => {
@@ -98,8 +98,8 @@ paper.if = (conditionState, trueVal, falseVal) => {
  * @param {function} renderCallback Function returning an HTMLElement for each item
  * @returns {HTMLDivElement} Content container fragment
  */
-paper.for = (arrayState, renderCallback) => {
-    let container = paper.div({ style: { display: 'contents' } });
+papyr.for = (arrayState, renderCallback) => {
+    let container = papyr.div({ style: { display: 'contents' } });
     
     let update = (arr) => {
         container.innerHTML = '';

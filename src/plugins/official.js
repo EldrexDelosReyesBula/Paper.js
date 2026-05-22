@@ -5,9 +5,9 @@
  */
 
 (function() {
-    // Check if paper exists
-    if (typeof paper === 'undefined') {
-        console.warn("Paper core not detected. Official plugins require paper core to run.");
+    // Check if papyr exists
+    if (typeof papyr === 'undefined') {
+        console.warn("Papyr core not detected. Official plugins require papyr core to run.");
         return;
     }
 
@@ -54,7 +54,7 @@
     /**
      * Generates a modern vector SVG element for preloaded system icons.
      */
-    paper.icon = (name, options = {}) => {
+    papyr.icon = (name, options = {}) => {
         let size = options.size || 16;
         let color = options.color || 'currentColor';
         let strokeWidth = options.strokeWidth || 2;
@@ -83,15 +83,15 @@
     /**
      * Auto-suggestions matching autocomplete inputs connected to remote endpoints.
      */
-    paper.autoComplete = (inputEl, apiUrl) => {
+    papyr.autoComplete = (inputEl, apiUrl) => {
         let input;
         let isLocal = Array.isArray(inputEl);
         
         if (isLocal) {
             let placeholder = typeof apiUrl === 'string' ? apiUrl : 'Search...';
-            input = paper.input('text', placeholder, { style: { width: '100%' } });
+            input = papyr.input('text', placeholder, { style: { width: '100%' } });
         } else {
-            input = typeof inputEl === 'string' ? paper.input('text', inputEl, { style: { width: '100%' } }) : inputEl;
+            input = typeof inputEl === 'string' ? papyr.input('text', inputEl, { style: { width: '100%' } }) : inputEl;
         }
         
         // Bulletproof fallback check to guarantee input supports addEventListener
@@ -104,8 +104,8 @@
             input.className = 'input-text';
         }
         
-        let suggestions = paper.ul('.suggestions');
-        let container = paper.div('.autocomplete', input, suggestions);
+        let suggestions = papyr.ul('.suggestions');
+        let container = papyr.div('.autocomplete', input, suggestions);
         let debounceTimer;
         
         if (isLocal) {
@@ -116,7 +116,7 @@
                 
                 let matches = inputEl.filter(item => item.toLowerCase().includes(value));
                 matches.slice(0, 5).forEach(item => {
-                    let li = paper.li(item, {
+                    let li = papyr.li(item, {
                         on: {
                             click: () => {
                                 input.value = item;
@@ -151,12 +151,12 @@
                         let items = Array.isArray(data) ? data : (data.results || data.products || data.data || []);
                         items.slice(0, 5).forEach(item => {
                             let text = item.title || item.name || item.username || item;
-                            let li = paper.li(text, {
+                            let li = papyr.li(text, {
                                 on: {
                                     click: () => {
                                         input.value = text;
                                         suggestions.innerHTML = '';
-                                        if(paper.onSuggestion) paper.onSuggestion(item);
+                                        if(papyr.onSuggestion) papyr.onSuggestion(item);
                                         
                                         let selectEv = new CustomEvent('select', { detail: item });
                                         container.dispatchEvent(selectEv);
@@ -182,26 +182,26 @@
     /**
      * Highly versatile auto-builder forms creator.
      */
-    paper.form = (...args) => {
+    papyr.form = (...args) => {
         if (args.length > 0 && Array.isArray(args[0])) {
             let [fields, onSubmit] = args;
-            let form = paper('form', '.paper-form');
+            let form = papyr('form', '.papyr-form');
             let formElements = [];
             
             fields.forEach(field => {
-                let wrapper = paper.div('.form-field');
-                let label = paper.label(field.label, {for: field.name});
+                let wrapper = papyr.div('.form-field');
+                let label = papyr.label(field.label, {for: field.name});
                 let input;
                 
                 if(field.type === 'select') {
-                    input = paper.select({name: field.name, id: field.name});
+                    input = papyr.select({name: field.name, id: field.name});
                     field.options.forEach(opt => {
-                        input.appendChild(paper.option(opt, {value: opt, textContent: opt}));
+                        input.appendChild(papyr.option(opt, {value: opt, textContent: opt}));
                     });
                 } else if(field.type === 'textarea') {
-                    input = paper.textarea('', {name: field.name, id: field.name, rows: field.rows || 3, placeholder: field.placeholder || ''});
+                    input = papyr.textarea('', {name: field.name, id: field.name, rows: field.rows || 3, placeholder: field.placeholder || ''});
                 } else {
-                    input = paper.input('', {type: field.type || 'text', name: field.name, id: field.name, placeholder: field.placeholder || ''});
+                    input = papyr.input('', {type: field.type || 'text', name: field.name, id: field.name, placeholder: field.placeholder || ''});
                 }
                 
                 wrapper.appendChild(label);
@@ -210,7 +210,7 @@
                 formElements.push(input);
             });
             
-            let submitBtn = paper.button('Submit', {type: 'submit', class: 'btn-primary'});
+            let submitBtn = papyr.button('Submit', {type: 'submit', class: 'btn-primary'});
             form.appendChild(submitBtn);
             
             form.addEventListener('submit', (e) => {
@@ -222,40 +222,40 @@
             
             return form;
         } else {
-            return paper('form', ...args);
+            return papyr('form', ...args);
         }
     };
 
     /**
      * Glassmorphism Content Card.
      */
-    paper.card = (title, content, footer = null) => {
-        let headerEl = typeof title === 'string' ? paper.h3(title, '.card-title') : title;
-        let contentEl = typeof content === 'string' ? paper.div(content, '.card-content') : content;
+    papyr.card = (title, content, footer = null) => {
+        let headerEl = typeof title === 'string' ? papyr.h3(title, '.card-title') : title;
+        let contentEl = typeof content === 'string' ? papyr.div(content, '.card-content') : content;
         
         let children = [headerEl, contentEl];
         if (footer) {
-            let footerEl = typeof footer === 'string' ? paper.div(footer, '.card-footer') : footer;
+            let footerEl = typeof footer === 'string' ? papyr.div(footer, '.card-footer') : footer;
             children.push(footerEl);
         }
         
-        return paper.div('.card', ...children);
+        return papyr.div('.card', ...children);
     };
 
     /**
      * Dialog modal frames with .show() and .hide() routines.
      */
-    paper.modal = (content, title = "Modal") => {
-        let modal = paper.div('.modal', {style: {display: 'none'}},
-            paper.div('.modal-content',
-                paper.div('.modal-header',
-                    paper.h3(title),
-                    paper.button('×', {
+    papyr.modal = (content, title = "Modal") => {
+        let modal = papyr.div('.modal', {style: {display: 'none'}},
+            papyr.div('.modal-content',
+                papyr.div('.modal-header',
+                    papyr.h3(title),
+                    papyr.button('×', {
                         class: 'close-btn',
                         on: {click: () => modal.hide()}
                     })
                 ),
-                paper.div(content, '.modal-body')
+                papyr.div(content, '.modal-body')
             )
         );
         
@@ -276,7 +276,7 @@
     };
 
     // Static native fallbacks for browser/OS alert & confirm
-    paper.modal.alert = (message, title = "Alert") => {
+    papyr.modal.alert = (message, title = "Alert") => {
         if (typeof window !== 'undefined') {
             // Check if HTML5 Dialog is preferred, otherwise use window.alert
             if (window.alert) {
@@ -285,7 +285,7 @@
         }
     };
 
-    paper.modal.confirm = (message, callback) => {
+    papyr.modal.confirm = (message, callback) => {
         if (typeof window !== 'undefined' && window.confirm) {
             let res = window.confirm(message);
             if (callback) callback(res);
@@ -298,13 +298,13 @@
     /**
      * Micro-toast notification alerts. Supports OS native push notifications fallback.
      */
-    paper.toast = (message, type = 'info', duration = 3000, useNative = false) => {
+    papyr.toast = (message, type = 'info', duration = 3000, useNative = false) => {
         if (useNative && typeof window !== 'undefined' && 'Notification' in window) {
             const fireNative = () => {
                 try {
-                    new Notification('Paper Notification', {
+                    new Notification('Papyr Notification', {
                         body: message,
-                        icon: 'https://eldrex.landecs.org/logo/eldrex-paper-js.png'
+                        icon: 'https://eldrex.landecs.org/logo/eldrex-papyr-js.png'
                     });
                 } catch (e) {
                     showCustomToast();
@@ -329,7 +329,7 @@
         showCustomToast();
         
         function showCustomToast() {
-            let toast = paper.div(message, `.toast.toast-${type}`);
+            let toast = papyr.div(message, `.toast.toast-${type}`);
             document.body.appendChild(toast);
             
             toast.offsetHeight; // trigger reflow
@@ -346,27 +346,27 @@
     /**
      * High-performance Tabs routing widgets.
      */
-    paper.tabs = (tabs) => {
-        let tabHeaders = paper.div('.tab-headers');
-        let tabContents = paper.div('.tab-contents');
-        let container = paper.div('.tabs', tabHeaders, tabContents);
+    papyr.tabs = (tabs) => {
+        let tabHeaders = papyr.div('.tab-headers');
+        let tabContents = papyr.div('.tab-contents');
+        let container = papyr.div('.tabs', tabHeaders, tabContents);
         
         tabs.forEach((tab, index) => {
-            let header = paper.button(tab.title, {
+            let header = papyr.button(tab.title, {
                 class: index === 0 ? 'tab-header tab-active' : 'tab-header',
                 on: {click: () => {
                     container.querySelectorAll('.tab-header').forEach((h, idx) => {
                         h.classList.toggle('tab-active', idx === index);
                     });
                     tabContents.innerHTML = '';
-                    let contentNode = typeof tab.content === 'string' ? paper.div(tab.content) : tab.content;
+                    let contentNode = typeof tab.content === 'string' ? papyr.div(tab.content) : tab.content;
                     tabContents.appendChild(contentNode);
                 }}
             });
             tabHeaders.appendChild(header);
             
             if(index === 0) {
-                let contentNode = typeof tab.content === 'string' ? paper.div(tab.content) : tab.content;
+                let contentNode = typeof tab.content === 'string' ? papyr.div(tab.content) : tab.content;
                 tabContents.appendChild(contentNode);
             }
         });
@@ -377,25 +377,25 @@
     /**
      * Highly responsive Table renderer.
      */
-    paper.table = (...args) => {
+    papyr.table = (...args) => {
         if (args.length > 0 && Array.isArray(args[0]) && typeof args[0][0] === 'string') {
             let [headers, data] = args;
-            let table = paper('table', '.data-table');
-            let thead = paper.thead();
-            let trHead = paper.tr();
+            let table = papyr('table', '.data-table');
+            let thead = papyr.thead();
+            let trHead = papyr.tr();
             headers.forEach(h => {
                 let formattedHeader = h.charAt(0).toUpperCase() + h.slice(1);
-                trHead.appendChild(paper.th(formattedHeader));
+                trHead.appendChild(papyr.th(formattedHeader));
             });
             thead.appendChild(trHead);
             table.appendChild(thead);
             
-            let tbody = paper.tbody();
+            let tbody = papyr.tbody();
             data.forEach(row => {
-                let tr = paper.tr();
+                let tr = papyr.tr();
                 headers.forEach(header => {
                     let cellVal = row[header] !== undefined ? row[header] : '';
-                    let td = paper.td();
+                    let td = papyr.td();
                     if (cellVal instanceof Element) {
                         td.appendChild(cellVal);
                     } else {
@@ -409,19 +409,19 @@
             
             return table;
         } else {
-            return paper('table', ...args);
+            return papyr('table', ...args);
         }
     };
 
     /**
      * Async data spinner fetch utility.
      */
-    paper.fetch = async (url, options = {}) => {
-        let loading = paper.div('.loading', 
-            paper.div('.spinner'),
-            paper.span('Fetching data...')
+    papyr.fetch = async (url, options = {}) => {
+        let loading = papyr.div('.loading', 
+            papyr.div('.spinner'),
+            papyr.span('Fetching data...')
         );
-        let container = paper.div(loading);
+        let container = papyr.div(loading);
         
         setTimeout(async () => {
             try {
@@ -431,11 +431,11 @@
                 if(options.onSuccess) {
                     options.onSuccess(container, data);
                 } else {
-                    container.appendChild(paper.pre(JSON.stringify(data, null, 2)));
+                    container.appendChild(papyr.pre(JSON.stringify(data, null, 2)));
                 }
             } catch(e) {
                 container.innerHTML = '';
-                container.appendChild(paper.div('.error', `⚠️ Error: ${e.message}`));
+                container.appendChild(papyr.div('.error', `⚠️ Error: ${e.message}`));
             }
         }, 400);
         
@@ -446,23 +446,23 @@
     // 3. Official Plugins (Form, Table, Charts)
     // ==========================================
 
-    paper.input = (type, placeholder, options = {}) => {
-        return paper('input', `.input-${type}`, {
+    papyr.input = (type, placeholder, options = {}) => {
+        return papyr('input', `.input-${type}`, {
             type: type, 
             placeholder: placeholder, 
             ...options
         });
     };
 
-    paper.simpleTable = (data) => {
-        let table = paper('table', '.paper-table');
+    papyr.simpleTable = (data) => {
+        let table = papyr('table', '.papyr-table');
         
         // Add headers
         if (data.headers) {
-            let thead = paper('thead');
-            let tr = paper('tr');
+            let thead = papyr('thead');
+            let tr = papyr('tr');
             data.headers.forEach(header => {
-                tr.appendChild(paper('th', header));
+                tr.appendChild(papyr('th', header));
             });
             thead.appendChild(tr);
             table.appendChild(thead);
@@ -470,11 +470,11 @@
         
         // Add rows
         if (data.rows) {
-            let tbody = paper('tbody');
+            let tbody = papyr('tbody');
             data.rows.forEach(row => {
-                let tr = paper('tr');
+                let tr = papyr('tr');
                 row.forEach(cell => {
-                    tr.appendChild(paper('td', String(cell)));
+                    tr.appendChild(papyr('td', String(cell)));
                 });
                 tbody.appendChild(tr);
             });
@@ -487,8 +487,8 @@
     /**
      * High-performance Canvas based micro-charts plugin.
      */
-    paper.chart = (type, data, options = {}) => {
-        let canvas = paper('canvas', {
+    papyr.chart = (type, data, options = {}) => {
+        let canvas = papyr('canvas', {
             width: options.width || 300,
             height: options.height || 180,
             style: { 
@@ -589,30 +589,30 @@
     // ==========================================
     // 4. Pre-built Components
     // ==========================================
-    paper.components = {
+    papyr.components = {
         navbar: (logo, links) => {
-            let nav = paper.nav('.navbar');
-            let navLinks = paper.div('.nav-links');
+            let nav = papyr.nav('.navbar');
+            let navLinks = papyr.div('.nav-links');
             
             links.forEach(link => {
-                navLinks.appendChild(paper.a(link.text, {
+                navLinks.appendChild(papyr.a(link.text, {
                     href: link.href, 
                     class: 'nav-link',
                     onclick: link.onclick || null
                 }));
             });
             
-            let logoEl = typeof logo === 'string' ? paper.div(logo, '.logo') : logo;
+            let logoEl = typeof logo === 'string' ? papyr.div(logo, '.logo') : logo;
             nav.appendChild(logoEl);
             nav.appendChild(navLinks);
             return nav;
         },
         
         hero: (title, subtitle, buttonText, buttonAction) => {
-            return paper.section('.hero',
-                paper.h1(title, '.hero-title'),
-                paper.p(subtitle, '.hero-subtitle'),
-                paper.button(buttonText, {
+            return papyr.section('.hero',
+                papyr.h1(title, '.hero-title'),
+                papyr.p(subtitle, '.hero-subtitle'),
+                papyr.button(buttonText, {
                     class: 'hero-btn', 
                     on: {click: buttonAction}
                 })
@@ -620,19 +620,19 @@
         },
         
         sidebar: (items) => {
-            let sidebar = paper.aside('.sidebar');
+            let sidebar = papyr.aside('.sidebar');
             items.forEach(item => {
                 let name = typeof item === 'string' ? item : (item.text || '');
                 let sidebarItem;
                 
                 if (typeof item === 'object' && item.icon) {
-                    sidebarItem = paper.div('.sidebar-item', 
-                        paper.icon(item.icon, { size: 16, style: { marginRight: '8px' } }),
-                        paper.span(name)
+                    sidebarItem = papyr.div('.sidebar-item', 
+                        papyr.icon(item.icon, { size: 16, style: { marginRight: '8px' } }),
+                        papyr.span(name)
                     );
                 } else {
-                    sidebarItem = paper.div('.sidebar-item', 
-                        paper.span(name)
+                    sidebarItem = papyr.div('.sidebar-item', 
+                        papyr.span(name)
                     );
                 }
                 
@@ -642,7 +642,7 @@
                     sidebar.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
                     sidebarItem.classList.add('active');
                     if (item.onclick) item.onclick(name);
-                    else paper.toast(`Navigated to: ${name}`, 'info');
+                    else papyr.toast(`Navigated to: ${name}`, 'info');
                 });
                 
                 sidebar.appendChild(sidebarItem);
@@ -651,31 +651,31 @@
         },
         
         footer: (text, links = []) => {
-            let footer = paper.footer('.footer');
-            let linkContainer = paper.div('.footer-links');
+            let footer = papyr.footer('.footer');
+            let linkContainer = papyr.div('.footer-links');
             links.forEach(link => {
-                linkContainer.appendChild(paper.a(link.text, {href: link.href}));
+                linkContainer.appendChild(papyr.a(link.text, {href: link.href}));
             });
             footer.appendChild(linkContainer);
-            footer.appendChild(paper.p(text, '.footer-text'));
+            footer.appendChild(papyr.p(text, '.footer-text'));
             return footer;
         },
         
         carousel: (images) => {
             let current = 0;
-            let img = paper.img('', {src: images[0], class: 'carousel-img'});
-            let prevBtn = paper.button('◀', {class: 'carousel-btn prev-btn'});
-            let nextBtn = paper.button('▶', {class: 'carousel-btn next-btn'});
+            let img = papyr.img('', {src: images[0], class: 'carousel-img'});
+            let prevBtn = papyr.button('◀', {class: 'carousel-btn prev-btn'});
+            let nextBtn = papyr.button('▶', {class: 'carousel-btn next-btn'});
             
-            let dotsContainer = paper.div('.carousel-dots');
+            let dotsContainer = papyr.div('.carousel-dots');
             images.forEach((_, idx) => {
-                let dot = paper.span('.carousel-dot');
+                let dot = papyr.span('.carousel-dot');
                 if (idx === 0) dot.classList.add('active');
                 dot.onclick = () => goTo(idx);
                 dotsContainer.appendChild(dot);
             });
             
-            let container = paper.div('.carousel', prevBtn, img, nextBtn, dotsContainer);
+            let container = papyr.div('.carousel', prevBtn, img, nextBtn, dotsContainer);
             
             function updateCarousel() {
                 img.style.opacity = 0;

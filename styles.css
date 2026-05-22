@@ -916,7 +916,7 @@ body::after {
 @media (min-width: 1400px) { .col-xxl { flex: 1 0 0%; } }
 
 /* PAPER ANIMATE CSS */
-.paper-animate-base {
+.papyr-animate-base {
     opacity: 0;
     will-change: transform, opacity;
     animation-duration: 0.8s;
@@ -929,32 +929,32 @@ body::after {
 }
 
 /* Entrance Animations */
-.animate-fade-in { animation-name: paper-fade-in; }
-@keyframes paper-fade-in {
+.animate-fade-in { animation-name: papyr-fade-in; }
+@keyframes papyr-fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-.animate-slide-up { animation-name: paper-slide-up; }
-@keyframes paper-slide-up {
+.animate-slide-up { animation-name: papyr-slide-up; }
+@keyframes papyr-slide-up {
     from { opacity: 0; transform: translateY(40px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-slide-down { animation-name: paper-slide-down; }
-@keyframes paper-slide-down {
+.animate-slide-down { animation-name: papyr-slide-down; }
+@keyframes papyr-slide-down {
     from { opacity: 0; transform: translateY(-40px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-zoom-in { animation-name: paper-zoom-in; }
-@keyframes paper-zoom-in {
+.animate-zoom-in { animation-name: papyr-zoom-in; }
+@keyframes papyr-zoom-in {
     from { opacity: 0; transform: scale(0.85); }
     to { opacity: 1; transform: scale(1); }
 }
 
-.animate-bounce { animation-name: paper-bounce; animation-timing-function: cubic-bezier(0.28, 0.84, 0.42, 1); }
-@keyframes paper-bounce {
+.animate-bounce { animation-name: papyr-bounce; animation-timing-function: cubic-bezier(0.28, 0.84, 0.42, 1); }
+@keyframes papyr-bounce {
     0% { opacity: 0; transform: scale(0.3); }
     50% { opacity: 1; transform: scale(1.05); }
     70% { transform: scale(0.9); }
@@ -979,7 +979,7 @@ body::after {
 
 /* Reduce motion accessibility */
 @media (prefers-reduced-motion: reduce) {
-    .paper-animate-base, .hover-grow, .hover-lift {
+    .papyr-animate-base, .hover-grow, .hover-lift {
         animation: none !important;
         transition: none !important;
         transform: none !important;
@@ -988,7 +988,7 @@ body::after {
 }
 
 
-/* Paper.js Responsive Grid System */
+/* Papyr.js Responsive Grid System */
 .container { width: 100%; margin-right: auto; margin-left: auto; padding-right: 15px; padding-left: 15px; }
 @media (min-width: 576px) { .container { max-width: 540px; } }
 @media (min-width: 768px) { .container { max-width: 720px; } }

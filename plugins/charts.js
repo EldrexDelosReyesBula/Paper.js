@@ -2,8 +2,8 @@
 // Exquisite micro-charts plugin to draw progress rings and bar charts using pure HTML5 Canvas
 
 function chartsPlugin(paper) {
-    paper.chart = (type, data, options = {}) => {
-        let canvas = paper('canvas', {
+    papyr.chart = (type, data, options = {}) => {
+        let canvas = papyr('canvas', {
             width: options.width || 300,
             height: options.height || 180,
             style: { 

@@ -2,15 +2,15 @@
 // Custom plugin for simple automated data grids and tables
 
 function tablePlugin(paper) {
-    paper.simpleTable = (data) => {
-        let table = paper('table', '.paper-table');
+    papyr.simpleTable = (data) => {
+        let table = papyr('table', '.papyr-table');
         
         // Add headers
         if (data.headers) {
-            let thead = paper('thead');
-            let tr = paper('tr');
+            let thead = papyr('thead');
+            let tr = papyr('tr');
             data.headers.forEach(header => {
-                tr.appendChild(paper('th', header));
+                tr.appendChild(papyr('th', header));
             });
             thead.appendChild(tr);
             table.appendChild(thead);
@@ -18,11 +18,11 @@ function tablePlugin(paper) {
         
         // Add rows
         if (data.rows) {
-            let tbody = paper('tbody');
+            let tbody = papyr('tbody');
             data.rows.forEach(row => {
-                let tr = paper('tr');
+                let tr = papyr('tr');
                 row.forEach(cell => {
-                    tr.appendChild(paper('td', String(cell)));
+                    tr.appendChild(papyr('td', String(cell)));
                 });
                 tbody.appendChild(tr);
             });

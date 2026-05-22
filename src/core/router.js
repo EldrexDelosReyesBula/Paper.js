@@ -4,15 +4,15 @@
  */
 (function() {
     let routes = [];
-    let currentView = paper.state(null);
-    let pathParams = paper.state({});
+    let currentView = papyr.state(null);
+    let pathParams = papyr.state({});
 
     /**
      * Define a hash route.
      * @param {string} path Route path (e.g., "#/about", "#/user/:id")
      * @param {function|class} componentFn Component or Class to render
      */
-    paper.route = (path, componentFn) => {
+    papyr.route = (path, componentFn) => {
         // Strip leading hash for internal regex matching
         let cleanPath = path.startsWith('#') ? path.substring(1) : path;
         routes.push({
@@ -27,7 +27,7 @@
      * Navigates to a specific path using hash.
      * @param {string} path Target URL hash path
      */
-    paper.navigate = (path) => {
+    papyr.navigate = (path) => {
         if (typeof window !== 'undefined') {
             window.location.hash = path.startsWith('#') ? path : '#' + path;
         }
@@ -52,7 +52,7 @@
                 }
             }
             if (!matchFound) {
-                currentView.value = () => paper.div("404 - Route Not Found");
+                currentView.value = () => papyr.div("404 - Route Not Found");
             }
         });
     }
@@ -60,29 +60,41 @@
     /**
      * Global accessor for route parameters
      */
-    paper.useParams = () => pathParams;
+    papyr.useParams = () => pathParams;
 
     /**
      * Initializes the router and returns the reactive router container.
      */
-    paper.router = () => {
+    papyr.router = () => {
         if (typeof window !== 'undefined' && routes.length > 0 && !currentView.value) {
             window.dispatchEvent(new Event('hashchange')); // Initial load
         }
         
-        // Reactive component switcher
-        return paper.if(
+        let routeNode = papyr.if(
             currentView,
             () => {
                 let Component = currentView.value;
-                // OOP Check: if it's a class extending paper.component
-                if (Component.prototype && Component.prototype instanceof paper.component) {
+                if (Component.prototype && Component.prototype instanceof papyr.component) {
                     return new Component().render();
                 }
                 return Component();
             },
-            () => paper.div()
+            () => papyr.div()
         );
+
+        // Persistent Workspace Check
+        if (typeof document !== 'undefined') {
+            // Wait for DOM to paint, then check if layout engine created a shell
+            setTimeout(() => {
+                let mainShell = document.querySelector('.papyr-main-content');
+                if (mainShell && !mainShell.contains(routeNode)) {
+                    mainShell.innerHTML = '';
+                    mainShell.appendChild(routeNode);
+                }
+            }, 0);
+        }
+
+        return routeNode;
     };
 
 })();

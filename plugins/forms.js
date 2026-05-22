@@ -2,24 +2,24 @@
 // Custom forms plugin that adds inputs and forms shortcuts to paper
 
 function formPlugin(paper) {
-    paper.input = (type, placeholder, options = {}) => {
-        return paper('input', `.input-${type}`, {
+    papyr.input = (type, placeholder, options = {}) => {
+        return papyr('input', `.input-${type}`, {
             type: type, 
             placeholder: placeholder, 
             ...options
         });
     };
     
-    paper.form = (...fields) => {
-        let form = paper('form', '.form');
+    papyr.form = (...fields) => {
+        let form = papyr('form', '.form');
         fields.forEach(f => {
             if (f.text && f.placeholder) {
-                form.appendChild(paper.input(f.text, f.placeholder));
+                form.appendChild(papyr.input(f.text, f.placeholder));
             } else if (f instanceof HTMLElement) {
                 form.appendChild(f);
             }
         });
-        form.appendChild(paper('button', 'Submit', { type: 'submit' }));
+        form.appendChild(papyr('button', 'Submit', { type: 'submit' }));
         return form;
     };
 }

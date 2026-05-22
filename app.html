@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Paper App</title>
-    <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
-    <!-- Paper Complete CDN link - Zero download dependencies -->
-    <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
+    <title>My Papyr App</title>
+    <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-papyr-js.png">
+    <!-- Papyr Complete CDN link - Zero download dependencies -->
+    <script src="https://eldrex-papyr-js.vercel.app/papyr-complete.js"></script>
     <style>
         :root {
             --bg: #070913;
@@ -92,29 +92,29 @@
     <div id="app"></div>
 
     <script>
-        // Custom starting code with Paper.js state and computing
-        let count = paper.state(0);
-        let double = paper.computed(() => count.value * 2);
+        // Custom starting code with Papyr.js state and computing
+        let count = papyr.state(0);
+        let double = papyr.computed(() => count.value * 2);
 
-        let app = paper.div(".card",
-            paper.h2("⚡ Welcome to Paper!", { style: { margin: '0 0 0.5rem 0', color: '#fff' } }),
-            paper.p("Edit this HTML file directly to build high-performance, reactive pages without any bundlers or npm installs.", { style: { fontSize: '0.9rem', color: 'var(--text-muted)' } }),
+        let app = papyr.div(".card",
+            papyr.h2("⚡ Welcome to Papyr!", { style: { margin: '0 0 0.5rem 0', color: '#fff' } }),
+            papyr.p("Edit this HTML file directly to build high-performance, reactive pages without any bundlers or npm installs.", { style: { fontSize: '0.9rem', color: 'var(--text-muted)' } }),
             
-            paper.div({ style: { margin: '1.5rem 0', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' } },
-                paper.p(() => "Clicks Count: " + count.value, { style: { fontSize: '1.2rem', fontWeight: 'bold', color: '#14b8a6', margin: '0' } }),
-                paper.p(() => "Double Count: " + double.value, { style: { fontSize: '0.9rem', color: '#a5b4fc', margin: '5px 0 0 0' } })
+            papyr.div({ style: { margin: '1.5rem 0', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' } },
+                papyr.p(() => "Clicks Count: " + count.value, { style: { fontSize: '1.2rem', fontWeight: 'bold', color: '#14b8a6', margin: '0' } }),
+                papyr.p(() => "Double Count: " + double.value, { style: { fontSize: '0.9rem', color: '#a5b4fc', margin: '5px 0 0 0' } })
             ),
             
-            paper.button(".btn:Increment Reactive Value", {
+            papyr.button(".btn:Increment Reactive Value", {
                 onclick: () => {
                     count.value++;
-                    paper.toast("Value incremented!", "success");
+                    papyr.toast("Value incremented!", "success");
                 }
             })
         );
 
         // Mount dynamic element to standard root container
-        paper.mount("#app", app);
+        papyr.mount("#app", app);
     </script>
 </body>
 </html>

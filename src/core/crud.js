@@ -4,20 +4,20 @@
  * Auto-synchronizing reactive database store mapped directly to persistent LocalStorage.
  */
 
-paper.crud = (name, initialData = []) => {
+papyr.crud = (name, initialData = []) => {
     let getStored = () => {
         try {
-            return paper.storage(name) || initialData;
+            return papyr.storage(name) || initialData;
         } catch(e) {
             return initialData;
         }
     };
 
-    let items = paper.state(getStored());
+    let items = papyr.state(getStored());
 
     let sync = () => {
         try {
-            paper.storage(name, items.value);
+            papyr.storage(name, items.value);
         } catch(e) {
             console.warn("PaperStorageWarning: LocalStorage sync failed.", e);
         }
