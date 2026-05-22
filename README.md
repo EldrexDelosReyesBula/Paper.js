@@ -1,7 +1,7 @@
 <img width="1650" height="866" alt="Papyr.js banner" src="https://github.com/user-attachments/assets/b72e2615-0db3-4885-a424-a3ef1d094548" />
 
 # 📄 Papyrus (papyr.js) — HTML Made Stupid Simple
-> **Write HTML like you're writing a text message. Built with zero-dependency reactive magic, enterprise security, and premium responsive aesthetics.**
+> **Write HTML like you're writing a text message.**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-teal.svg)](#)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-indigo.svg)](#)
