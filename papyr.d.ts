@@ -155,4 +155,20 @@ declare namespace papyr {
         col(...children: any[]): HTMLElement;
         dashboard(options?: { sidebar?: any, header?: any, main?: any, footer?: any }): HTMLElement;
     };
+
+    export function noConflict(): any;
+
+    export const storage: {
+        set(key: string, val: any): void;
+        get(key: string): any;
+        secureSet(key: string, val: any, password: string): void;
+        secureGet(key: string, password: string): any;
+    };
+
+    export const session: {
+        set(key: string, val: any): void;
+        get(key: string): any;
+        secureSet(key: string, val: any, password: string): void;
+        secureGet(key: string, password: string): any;
+    };
 }

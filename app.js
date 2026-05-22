@@ -943,6 +943,75 @@ papyr.mount('#app', appShell);`,
 
                 return shell;
             }
+        },
+        'secure_vault': {
+            title: 'Enterprise Security Vault',
+            icon: 'lock',
+            blueprint: `// 1. Encrypt and store data in localStorage
+papyr.storage.secureSet(
+    "auth_token", 
+    { user: "admin", role: "super" }, 
+    "my-secret-key"
+);
+
+// 2. Data in browser devtools is completely obfuscated!
+
+// 3. Retrieve and decrypt natively
+let token = papyr.storage.secureGet("auth_token", "my-secret-key");
+console.log(token.user); // "admin"`,
+            creator: () => {
+                let savedData = papyr.state("No data saved yet.");
+                let rawLocalStorage = papyr.state("");
+
+                return papyr.div(
+                    papyr.h2('Secure Private Vault', { animate: 'fade-in' }),
+                    papyr.p('Papyr.js features a lightweight Security Kernel. Data written to LocalStorage via .secureSet is automatically encrypted.'),
+                    
+                    papyr.div(".glass-panel", { style: { padding: '20px', marginTop: '20px' } },
+                        papyr.h4("Write Secure Data", { style: { margin: '0 0 15px 0' } }),
+                        papyr.layout.flex({ gap: '10px', align: 'center' },
+                            papyr.input('password', 'Encryption Key...', { id: 'vault-key', style: { flex: 1 } }),
+                            papyr.input('text', 'Secret Message...', { id: 'vault-msg', style: { flex: 2 } }),
+                            papyr.button("Encrypt & Save", {
+                                class: 'btn-primary',
+                                onclick: () => {
+                                    let k = document.getElementById('vault-key').value;
+                                    let m = document.getElementById('vault-msg').value;
+                                    if (!k || !m) return papyr.toast("Key and Message required", "error");
+                                    
+                                    papyr.storage.secureSet("papyr_vault_demo", m, k);
+                                    savedData.value = m;
+                                    rawLocalStorage.value = localStorage.getItem("papyr_vault_demo");
+                                    papyr.toast("Encrypted and stored successfully!", "success");
+                                }
+                            })
+                        ),
+                        
+                        papyr.h4("What Hackers See (LocalStorage):", { style: { margin: '20px 0 5px 0', color: '#f87171' } }),
+                        papyr.pre(() => rawLocalStorage.value || "...", { 
+                            style: { background: '#0f172a', padding: '10px', borderRadius: '6px', color: '#f87171', wordBreak: 'break-all', whiteSpace: 'pre-wrap' } 
+                        }),
+
+                        papyr.h4("What You See (Decrypted):", { style: { margin: '15px 0 5px 0', color: '#10b981' } }),
+                        papyr.pre(() => savedData.value, { 
+                            style: { background: '#0f172a', padding: '10px', borderRadius: '6px', color: '#10b981' } 
+                        }),
+
+                        papyr.button("Test Decrypt", {
+                            style: { marginTop: '15px', background: 'transparent', border: '1px solid #10b981', color: '#10b981', padding: '8px 16px', borderRadius: '6px' },
+                            onclick: () => {
+                                let k = document.getElementById('vault-key').value;
+                                let decrypted = papyr.storage.secureGet("papyr_vault_demo", k);
+                                if (decrypted) {
+                                    papyr.toast("Decrypted successfully: " + decrypted, "success");
+                                } else {
+                                    papyr.toast("Decryption failed! Wrong key?", "error");
+                                }
+                            }
+                        })
+                    )
+                );
+            }
         }
     };
 

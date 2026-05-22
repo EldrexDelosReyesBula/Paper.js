@@ -1100,3 +1100,57 @@ body::after {
         padding: 2rem 1.5rem;
     }
 }
+
+
+/* Phase 6: Deep Mobile Responsiveness */
+@media (max-width: 768px) {
+    .papyr-layout-flex,
+    .papyr-layout-grid {
+        flex-direction: column !important;
+    }
+    
+    .papyr-app-shell {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto 1fr auto !important;
+    }
+    
+    .papyr-shell-sidebar {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+        max-height: 250px;
+        overflow-y: auto;
+    }
+    
+    .papyr-shell-header {
+        grid-column: 1 / -1 !important;
+        grid-row: 1 !important;
+    }
+    
+    .papyr-main-content {
+        grid-column: 1 / -1 !important;
+        grid-row: 3 !important;
+        padding: 15px !important;
+    }
+    
+    #app-container {
+        flex-direction: column !important;
+    }
+    
+    #hero {
+        padding: 40px 20px !important;
+        text-align: center;
+    }
+    
+    h1 {
+        font-size: 2.5rem !important;
+    }
+    
+    #catalog-sidebar {
+        width: 100% !important;
+        max-height: 300px;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border-color);
+    }
+}

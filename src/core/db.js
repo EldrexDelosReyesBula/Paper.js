@@ -94,10 +94,30 @@ papyr.db = (collectionName, engine = 'local') => {
 // Aliases for standard unified access
 papyr.storage = {
     set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-    get: (k) => JSON.parse(localStorage.getItem(k))
+    get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } },
+    secureSet: (k, v, password) => {
+        if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
+        localStorage.setItem(k, papyr.security.encrypt(JSON.stringify(v), password));
+    },
+    secureGet: (k, password) => {
+        if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
+        let enc = localStorage.getItem(k);
+        if (!enc) return null;
+        try { return JSON.parse(papyr.security.decrypt(enc, password)); } catch(e) { return null; }
+    }
 };
 
 papyr.session = {
     set: (k, v) => sessionStorage.setItem(k, JSON.stringify(v)),
-    get: (k) => JSON.parse(sessionStorage.getItem(k))
+    get: (k) => { try { return JSON.parse(sessionStorage.getItem(k)); } catch(e) { return null; } },
+    secureSet: (k, v, password) => {
+        if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
+        sessionStorage.setItem(k, papyr.security.encrypt(JSON.stringify(v), password));
+    },
+    secureGet: (k, password) => {
+        if (!papyr.security) return console.error("PapyrError: Security module not loaded.");
+        let enc = sessionStorage.getItem(k);
+        if (!enc) return null;
+        try { return JSON.parse(papyr.security.decrypt(enc, password)); } catch(e) { return null; }
+    }
 };

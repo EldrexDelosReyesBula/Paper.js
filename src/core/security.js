@@ -39,6 +39,34 @@
                 if (papyr.warn) papyr.warn("Papyr Security Kernel DISABLED. You are vulnerable to XSS.");
             }
             // Future: hook in external providers like DOMPurify
+        },
+
+        /**
+         * Lightweight Client-Side Storage Encryption (Obfuscation)
+         * Prevents generic localStorage scraping by malicious extensions.
+         */
+        encrypt(text, password) {
+            if (!text) return text;
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+            }
+            return typeof window !== 'undefined' ? window.btoa(result) : result;
+        },
+
+        decrypt(encodedText, password) {
+            if (!encodedText) return encodedText;
+            try {
+                let text = typeof window !== 'undefined' ? window.atob(encodedText) : encodedText;
+                let result = '';
+                for (let i = 0; i < text.length; i++) {
+                    result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                }
+                return result;
+            } catch(e) {
+                if (papyr.warn) papyr.warn("Papyr Security: Decryption failed (invalid key or corrupted data).");
+                return null;
+            }
         }
     };
 })();

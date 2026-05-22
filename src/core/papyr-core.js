@@ -210,7 +210,7 @@ function papyr(tag, ...args) {
 
 // Generate shortcuts for tags (e.g. papyr.div(), papyr.span())
 tagList.forEach(tag => {
-    paper[tag] = (...args) => papyr(tag, ...args);
+    papyr[tag] = (...args) => papyr(tag, ...args);
 });
 
 // Dynamic layout shortcuts for visual alignment
@@ -333,7 +333,7 @@ papyr.animate = (el, properties, duration = 400) => {
     });
 };
 
-papyr.use = (plugin) => plugin(paper);
+papyr.use = (plugin) => plugin(papyr);
 
 papyr.loadFramework = (framework) => {
     let id = `papyr-fw-${framework}`;
@@ -350,7 +350,6 @@ papyr.loadFramework = (framework) => {
         link.rel = 'stylesheet';
         link.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
         
-        // Find custom stylesheet tags to insert Bootstrap before them, preserving specificity priority
         let customStyle = document.getElementById('papyr-complete-styles') || document.querySelector('link[href*="styles.css"]') || document.querySelector('style');
         if (customStyle && customStyle.parentNode) {
             customStyle.parentNode.insertBefore(link, customStyle);
@@ -358,7 +357,6 @@ papyr.loadFramework = (framework) => {
             document.head.appendChild(link);
         }
         
-        // Force Bootstrap 5 Dark Theme on HTML document root and body
         if (typeof document !== 'undefined') {
             if (document.documentElement) {
                 document.documentElement.setAttribute('data-bs-theme', 'dark');
@@ -370,4 +368,14 @@ papyr.loadFramework = (framework) => {
     }
 };
 
-window.papyr = paper;
+let previousPapyr = typeof window !== 'undefined' ? window.papyr : null;
+papyr.noConflict = () => {
+    if (typeof window !== 'undefined') {
+        window.papyr = previousPapyr;
+    }
+    return papyr;
+};
+
+if (typeof window !== 'undefined') {
+    window.papyr = papyr;
+}
