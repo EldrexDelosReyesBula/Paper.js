@@ -44,7 +44,7 @@ const GettingStarted = () => {
         
         papyr.h2("1. Installation"),
         papyr.p("Simply include the CDN link at the top of your HTML file:"),
-        papyr.pre(papyr.code(`<script src="https://eldrex-papyr-js.vercel.app/papyr-complete.js"></script>`)),
+        papyr.pre(papyr.code(`<script src="https://papyrus-js.vercel.app/papyr-complete.js"></script>`)),
         
         papyr.h2("2. Create an Entry Point"),
         papyr.p("Add a container `<div>` to your HTML body where your app will live:"),

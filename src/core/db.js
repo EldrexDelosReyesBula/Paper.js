@@ -1,5 +1,5 @@
 /**
- * PAPER DATA SYSTEM (Unified DB API)
+ * PAPYR DATA SYSTEM (Unified DB API)
  * Seamlessly integrates LocalStorage, SessionStorage, IndexedDB, and SQLite endpoints.
  */
 

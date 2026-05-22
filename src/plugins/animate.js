@@ -1,5 +1,5 @@
 /**
- * PAPER ANIMATE
+ * PAPYR ANIMATE
  * Zero-dependency hardware-accelerated animation engine.
  */
 (function() {

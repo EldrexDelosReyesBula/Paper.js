@@ -1,6 +1,6 @@
 // app.js
 // Entire visual landing page and playground built dynamically using Papyr.js components!
-// Living proof of Paper's production-grade speed, reactivity, and aesthetic elegance.
+// Living proof of Papyr's production-grade speed, reactivity, and aesthetic elegance.
 
 (function() {
     // 1. Live Sandbox templates covering reactive state, conditional rendering, forms, Bootstrap, and Tailwind CSS.
@@ -204,7 +204,7 @@ return app;`
                 "Write HTML Like You're", papyr.br(), "Writing a Text Message."
             ),
             papyr.p(".hero-subtitle",
-                "Meet ", papyr.strong("Paper"), ", the dead-simple JavaScript library that compiles direct reactive UI trees without any bundlers, virtual DOM reflows, or terminal setups."
+                "Meet ", papyr.strong("Papyr"), ", the dead-simple JavaScript library that compiles direct reactive UI trees without any bundlers, virtual DOM reflows, or terminal setups."
             ),
             papyr.flex.center(
                 papyr.a({ href: '#playground', class: 'gradient-btn' },

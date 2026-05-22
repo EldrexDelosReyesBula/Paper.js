@@ -1,5 +1,5 @@
 /**
- * PAPER CORE DOM ENGINE
+ * PAPYR CORE DOM ENGINE
  * 
  * Compiles standard JS parameter lists, selectors, and states to native, styled HTML elements.
  */
@@ -71,7 +71,31 @@ function checkTag(tag) {
  */
 function papyr(tag, ...args) {
     checkTag(tag);
-    let el = document.createElement(tag);
+    let el;
+    if (tag && tag.toLowerCase() === 'script') {
+        el = document.createElement(tag);
+        const originalSetAttribute = el.setAttribute;
+        el.setAttribute = function(k, v) {
+            if (k && k.toLowerCase() === 'src' && papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
+                console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                return;
+            }
+            originalSetAttribute.apply(this, arguments);
+        };
+        Object.defineProperty(el, 'src', {
+            set(v) {
+                if (papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
+                    console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                    return;
+                }
+                originalSetAttribute.call(el, 'src', v);
+            },
+            get() { return el.getAttribute('src'); },
+            configurable: true
+        });
+    } else {
+        el = document.createElement(tag);
+    }
 
     let appendChild = (child) => {
         if (child === null || child === undefined) return;
@@ -365,6 +389,19 @@ papyr.loadFramework = (framework) => {
                 document.body.setAttribute('data-bs-theme', 'dark');
             }
         }
+    }
+};
+
+papyr.init = (config = {}) => {
+    if (config.privacy) {
+        if (papyr.security && typeof papyr.security.setTier === 'function') {
+            papyr.security.setTier(config.privacy);
+        } else {
+            papyr._initialPrivacy = config.privacy;
+        }
+    }
+    if (config.debug !== undefined) {
+        papyr.debug(config.debug);
     }
 };
 

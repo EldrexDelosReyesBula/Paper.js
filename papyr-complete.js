@@ -10,7 +10,7 @@
 
 // --- MODULE: core/papyr-core.js ---
 /**
- * PAPER CORE DOM ENGINE
+ * PAPYR CORE DOM ENGINE
  * 
  * Compiles standard JS parameter lists, selectors, and states to native, styled HTML elements.
  */
@@ -82,7 +82,31 @@ function checkTag(tag) {
  */
 function papyr(tag, ...args) {
     checkTag(tag);
-    let el = document.createElement(tag);
+    let el;
+    if (tag && tag.toLowerCase() === 'script') {
+        el = document.createElement(tag);
+        const originalSetAttribute = el.setAttribute;
+        el.setAttribute = function(k, v) {
+            if (k && k.toLowerCase() === 'src' && papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
+                console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                return;
+            }
+            originalSetAttribute.apply(this, arguments);
+        };
+        Object.defineProperty(el, 'src', {
+            set(v) {
+                if (papyr.security && typeof papyr.security.shouldBlockScript === 'function' && papyr.security.shouldBlockScript(v)) {
+                    console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                    return;
+                }
+                originalSetAttribute.call(el, 'src', v);
+            },
+            get() { return el.getAttribute('src'); },
+            configurable: true
+        });
+    } else {
+        el = document.createElement(tag);
+    }
 
     let appendChild = (child) => {
         if (child === null || child === undefined) return;
@@ -379,6 +403,19 @@ papyr.loadFramework = (framework) => {
     }
 };
 
+papyr.init = (config = {}) => {
+    if (config.privacy) {
+        if (papyr.security && typeof papyr.security.setTier === 'function') {
+            papyr.security.setTier(config.privacy);
+        } else {
+            papyr._initialPrivacy = config.privacy;
+        }
+    }
+    if (config.debug !== undefined) {
+        papyr.debug(config.debug);
+    }
+};
+
 let previousPapyr = typeof window !== 'undefined' ? window.papyr : null;
 papyr.noConflict = () => {
     if (typeof window !== 'undefined') {
@@ -396,11 +433,118 @@ if (typeof window !== 'undefined') {
 /**
  * PAPER SECURITY KERNEL
  * Enterprise-grade XSS Sanitization and Injection Prevention.
+ * Web App Tracking Transparency (WATT) script and storage filter.
  */
 (function() {
+    let tempStorage = {};
+    const trackingKeys = ['_ga', '_gid', '_fbp', '_uid_tracking_id', 'tracking', 'analytics', 'pixel', 'adsense'];
+    
+    let originalSetItem = null;
+    let originalGetItem = null;
+    let originalRemoveItem = null;
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+        if (typeof localStorage.setItem === 'function') originalSetItem = localStorage.setItem.bind(localStorage);
+        if (typeof localStorage.getItem === 'function') originalGetItem = localStorage.getItem.bind(localStorage);
+        if (typeof localStorage.removeItem === 'function') originalRemoveItem = localStorage.removeItem.bind(localStorage);
+    }
+
     papyr.security = {
         _isActive: true, // Enabled by default for safety
-        
+        currentTier: 'default',
+        hasConsent: false,
+        _scriptsBlocked: false,
+
+        setTier(tier) {
+            this.currentTier = tier;
+            if (tier === 'high') {
+                this.blockThirdPartyScripts();
+            }
+        },
+
+        setConsent(granted) {
+            this.hasConsent = !!granted;
+            if (granted) {
+                // Flush tempStorage back to real localStorage
+                try {
+                    if (originalSetItem) {
+                        Object.entries(tempStorage).forEach(([k, v]) => {
+                            originalSetItem(k, v);
+                        });
+                    }
+                    tempStorage = {};
+                } catch(e) {}
+            } else {
+                // Clear tracking keys from real localStorage
+                try {
+                    if (originalRemoveItem && originalGetItem) {
+                        trackingKeys.forEach(tk => {
+                            for (let i = localStorage.length - 1; i >= 0; i--) {
+                                let key = localStorage.key(i);
+                                if (key && key.toLowerCase().includes(tk)) {
+                                    originalRemoveItem(key);
+                                }
+                            }
+                        });
+                    }
+                } catch(e) {}
+            }
+        },
+
+        shouldBlockScript(src) {
+            if (this.currentTier === 'none') return false;
+            if (!src || typeof src !== 'string') return false;
+            
+            const trackingDomains = ['analytics', 'pixel', 'doubleclick', 'google-analytics', 'adsense', 'ad-tracker', 'facebook.net', 'adnxs'];
+            const isTracker = trackingDomains.some(d => src.toLowerCase().includes(d));
+            
+            if (this.currentTier === 'high' && isTracker) return true;
+            if (this.currentTier === 'default' && !this.hasConsent && isTracker) return true;
+            return false;
+        },
+
+        blockThirdPartyScripts() {
+            if (typeof document === 'undefined') return;
+            if (this._scriptsBlocked) return;
+            this._scriptsBlocked = true;
+            
+            const originalCreateElement = document.createElement;
+            document.createElement = function(tag, options) {
+                const el = originalCreateElement.call(document, tag, options);
+                if (tag && tag.toLowerCase() === 'script') {
+                    const originalSetAttribute = el.setAttribute;
+                    el.setAttribute = function(k, v) {
+                        if (k && k.toLowerCase() === 'src' && papyr.security.shouldBlockScript(v)) {
+                            console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                            return;
+                        }
+                        originalSetAttribute.apply(this, arguments);
+                    };
+                    Object.defineProperty(el, 'src', {
+                        set(v) {
+                            if (papyr.security.shouldBlockScript(v)) {
+                                console.warn(`Papyr Security Kernel: Blocked tracking script from ${v}`);
+                                return;
+                            }
+                            originalSetAttribute.call(el, 'src', v);
+                        },
+                        get() { return el.getAttribute('src'); },
+                        configurable: true
+                    });
+                }
+                return el;
+            };
+        },
+
+        shouldSandboxStorage(key) {
+            if (this.currentTier === 'none') return false;
+            if (this.currentTier === 'high') return true;
+            if (!this.hasConsent) {
+                return trackingKeys.some(tk => key.toLowerCase().includes(tk));
+            }
+            return false;
+        },
+
         /**
          * Strip dangerous tags and attributes from raw HTML strings.
          */
@@ -433,7 +577,6 @@ if (typeof window !== 'undefined') {
                 this._isActive = false;
                 if (papyr.warn) papyr.warn("Papyr Security Kernel DISABLED. You are vulnerable to XSS.");
             }
-            // Future: hook in external providers like DOMPurify
         },
 
         /**
@@ -464,12 +607,38 @@ if (typeof window !== 'undefined') {
             }
         }
     };
+
+    // Install LocalStorage Interception
+    if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem = function(key, val) {
+            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+                tempStorage[key] = val;
+                return;
+            }
+            if (originalSetItem) originalSetItem(key, val);
+        };
+        
+        localStorage.getItem = function(key) {
+            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+                return tempStorage[key] !== undefined ? tempStorage[key] : null;
+            }
+            return originalGetItem ? originalGetItem(key) : null;
+        };
+        
+        localStorage.removeItem = function(key) {
+            if (papyr.security && papyr.security.shouldSandboxStorage(key)) {
+                delete tempStorage[key];
+                return;
+            }
+            if (originalRemoveItem) originalRemoveItem(key);
+        };
+    }
 })();
 
 
 // --- MODULE: core/reactivity.js ---
 /**
- * PAPER REACTIVITY SYSTEM
+ * PAPYR REACTIVITY SYSTEM
  * 
  * Auto-tracking reactive state variables and computed logic nodes.
  */
@@ -773,7 +942,7 @@ papyr.for = (arrayState, renderCallback) => {
 
 // --- MODULE: core/db.js ---
 /**
- * PAPER DATA SYSTEM (Unified DB API)
+ * PAPYR DATA SYSTEM (Unified DB API)
  * Seamlessly integrates LocalStorage, SessionStorage, IndexedDB, and SQLite endpoints.
  */
 
@@ -1107,7 +1276,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/official.js ---
 /**
- * PAPER OFFICIAL PLUGINS & WIDGETS
+ * PAPYR OFFICIAL PLUGINS & WIDGETS
  * 
  * Auto-registered official plugins, widgets, layout components, and vector icons.
  */
@@ -1555,11 +1724,13 @@ papyr.auth = {
     // ==========================================
 
     papyr.input = (type, placeholder, options = {}) => {
-        return papyr('input', `.input-${type}`, {
-            type: type, 
-            placeholder: placeholder, 
-            ...options
-        });
+        if (typeof type === 'object' && type !== null) return papyr('input', type);
+        if (typeof placeholder === 'object' && placeholder !== null) { options = placeholder; placeholder = options.placeholder || ''; }
+        options = Object.assign({}, options);
+        if (type) options.type = options.type || type;
+        if (placeholder) options.placeholder = options.placeholder || placeholder;
+        if (type) return papyr('input', `.input-${type}`, options);
+        return papyr('input', options);
     };
 
     papyr.simpleTable = (data) => {
@@ -1819,7 +1990,7 @@ papyr.auth = {
 
 // --- MODULE: plugins/animate.js ---
 /**
- * PAPER ANIMATE
+ * PAPYR ANIMATE
  * Zero-dependency hardware-accelerated animation engine.
  */
 (function() {
@@ -2530,18 +2701,146 @@ papyr.auth = {
  * PAPER WATT SYSTEM
  * Web App Tracking Transparency.
  * Intercepts hardware API calls to show branded permission modals before executing.
+ * Manages tracking permission prompts, privacy tiers, script blocks, and sandboxes.
  */
 (function() {
-    if (!papyr.camera || !papyr.location) {
-        if (papyr.warn) papyr.warn("WATT system requires browser-api.js to be loaded first.");
-        return;
-    }
+    // 1. Initialize papyr.watt APIs
+    papyr.watt = {
+        setTier(tier) {
+            if (papyr.security && typeof papyr.security.setTier === 'function') {
+                papyr.security.setTier(tier);
+            }
+        },
+        getTier() {
+            return papyr.security ? papyr.security.currentTier : 'default';
+        },
+        hasConsent() {
+            return papyr.security ? papyr.security.hasConsent : false;
+        },
+        requestTracking(options = {}) {
+            const { purpose = "We use data to personalize your experience and keep this app free.", onAllow = () => {}, onDeny = () => {} } = options;
+            
+            const currentTier = this.getTier();
+            
+            if (currentTier === 'none') {
+                if (papyr.security) papyr.security.setConsent(true);
+                onAllow();
+                return Promise.resolve(true);
+            }
+            
+            if (currentTier === 'high') {
+                if (papyr.security) {
+                    papyr.security.setConsent(false);
+                    papyr.security.blockThirdPartyScripts();
+                }
+                onDeny();
+                return Promise.resolve(false);
+            }
+            
+            return new Promise((resolve) => {
+                if (currentTier === 'minimal') {
+                    // Render inline banner pill at bottom of page
+                    if (typeof document === 'undefined') {
+                        onDeny();
+                        resolve(false);
+                        return;
+                    }
+                    
+                    let banner = papyr.div('.watt-banner-pill',
+                        papyr.span(purpose, { style: { fontSize: '0.85rem', color: '#cbd5e1' } }),
+                        papyr.flex.row(
+                            papyr.button("Opt Out", {
+                                style: { background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#fda4af', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem' },
+                                onclick: () => {
+                                    if (papyr.security) {
+                                        papyr.security.setConsent(false);
+                                        papyr.security.blockThirdPartyScripts();
+                                    }
+                                    onDeny();
+                                    banner.remove();
+                                    resolve(false);
+                                }
+                            }),
+                            papyr.button("Allow", {
+                                style: { background: '#14b8a6', color: '#fff', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold' },
+                                onclick: () => {
+                                    if (papyr.security) papyr.security.setConsent(true);
+                                    onAllow();
+                                    banner.remove();
+                                    resolve(true);
+                                }
+                            }),
+                            { style: { gap: '8px' } }
+                        )
+                    );
+                    document.body.appendChild(banner);
+                } else {
+                    // default mode: Pop up beautiful glassmorphic modal
+                    if (!papyr.modal) {
+                        // Fallback to confirm
+                        let ok = confirm(`${purpose}\n\nAllow tracking?`);
+                        if (ok) {
+                            if (papyr.security) papyr.security.setConsent(true);
+                            onAllow();
+                            resolve(true);
+                        } else {
+                            if (papyr.security) {
+                                papyr.security.setConsent(false);
+                                papyr.security.blockThirdPartyScripts();
+                            }
+                            onDeny();
+                            resolve(false);
+                        }
+                        return;
+                    }
+                    
+                    let consentModal = papyr.modal({
+                        title: "🔒 Data Transparency Request",
+                        animation: 'glass-pop',
+                        content: papyr.div({ style: { display: 'flex', flexDirection: 'column', gap: '15px' } },
+                            papyr.p(purpose, { style: { margin: 0, lineHeight: '1.5', color: '#cbd5e1' } }),
+                            papyr.p("WATT Protection Guard: We believe in complete control over your personal data. Denying tracking blocks ad trackers and sandboxes identifiers safely.", { 
+                                style: { margin: 0, fontSize: '0.8rem', color: '#64748b' } 
+                            }),
+                            papyr.flex.row(
+                                papyr.button("Ask App Not to Track", {
+                                    style: { background: 'rgba(255,255,255,0.05)', color: '#fda4af', border: '1px solid rgba(244,63,94,0.3)', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', flex: 1 },
+                                    onclick: () => {
+                                        consentModal.close();
+                                        if (papyr.security) {
+                                            papyr.security.setConsent(false);
+                                            papyr.security.blockThirdPartyScripts();
+                                        }
+                                        onDeny();
+                                        if (papyr.toast) papyr.toast("Ad tracking blocked securely.", "info");
+                                        resolve(false);
+                                    }
+                                }),
+                                papyr.button("Allow Personalization", {
+                                    style: { background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', cursor: 'pointer', flex: 1, fontWeight: 'bold' },
+                                    onclick: () => {
+                                        consentModal.close();
+                                        if (papyr.security) papyr.security.setConsent(true);
+                                        onAllow();
+                                        if (papyr.toast) papyr.toast("Preferences saved successfully.", "success");
+                                        resolve(true);
+                                    }
+                                }),
+                                { style: { gap: '12px', marginTop: '10px' } }
+                            )
+                        )
+                    });
+                }
+            });
+        }
+    };
 
+    // 2. Hardware permissions logic
     const requestPermission = (title, reason, iconPath, onAllow) => {
         return new Promise((resolve, reject) => {
             if (!papyr.modal) {
                 // Fallback to native confirm if UI components aren't loaded
-                let ok = confirm(`${title}\\n\\n${reason}\\n\\nAllow access?`);
+                let ok = confirm(`${title}\n\n${reason}\n\nAllow access?`);
                 if (ok) resolve(onAllow());
                 else reject(new Error("Permission denied by user."));
                 return;
@@ -2555,9 +2854,9 @@ papyr.auth = {
                     papyr.p("We believe in Data Transparency. This action will trigger a native browser prompt.", { 
                         style: { margin: 0, fontSize: '0.85rem', color: '#94a3b8' } 
                     }),
-                    papyr.flex.justify(
+                    papyr.flex.row(
                         papyr.button("Deny", {
-                            style: { background: 'transparent', color: '#f87171', border: '1px solid #f87171', padding: '8px 16px', borderRadius: '6px' },
+                            style: { background: 'transparent', color: '#f87171', border: '1px solid #f87171', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', flex: 1 },
                             onclick: () => {
                                 permissionModal.close();
                                 reject(new Error("Permission denied via WATT."));
@@ -2565,7 +2864,7 @@ papyr.auth = {
                             }
                         }),
                         papyr.button("Allow Access", {
-                            style: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px' },
+                            style: { background: '#3b82f6', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', flex: 1, fontWeight: 'bold' },
                             onclick: async () => {
                                 permissionModal.close();
                                 try {
@@ -2575,34 +2874,45 @@ papyr.auth = {
                                     reject(e);
                                 }
                             }
-                        })
+                        }),
+                        { style: { gap: '10px', marginTop: '10px' } }
                     )
                 )
             });
         });
     };
 
-    // Override camera to add request()
-    const originalCameraOpen = papyr.camera.open.bind(papyr.camera);
-    papyr.camera.request = (reason, videoElementId = null) => {
-        return requestPermission(
-            "Camera Access Required",
-            reason || "This application requires access to your camera.",
-            "camera",
-            () => originalCameraOpen(videoElementId)
-        );
-    };
+    // Override camera to add request() if camera API exists
+    if (papyr.camera) {
+        const originalCameraOpen = papyr.camera.open.bind(papyr.camera);
+        papyr.camera.request = (reason, videoElementId = null) => {
+            return requestPermission(
+                "Camera Access Required",
+                reason || "This application requires access to your camera.",
+                "camera",
+                () => originalCameraOpen(videoElementId)
+            );
+        };
+    }
 
-    // Override location to add request()
-    const originalLocationGet = papyr.location.get.bind(papyr.location);
-    papyr.location.request = (reason) => {
-        return requestPermission(
-            "Location Access Required",
-            reason || "This application requires access to your GPS coordinates.",
-            "map-pin",
-            () => originalLocationGet()
-        );
-    };
+    // Override location to add request() if location API exists
+    if (papyr.location) {
+        const originalLocationGet = papyr.location.get.bind(papyr.location);
+        papyr.location.request = (reason) => {
+            return requestPermission(
+                "Location Access Required",
+                reason || "This application requires access to your GPS coordinates.",
+                "map-pin",
+                () => originalLocationGet()
+            );
+        };
+    }
+
+    // Process any initial privacy settings set prior to WATT initialization
+    if (papyr._initialPrivacy) {
+        papyr.watt.setTier(papyr._initialPrivacy);
+        delete papyr._initialPrivacy;
+    }
 })();
 
 
@@ -3142,6 +3452,45 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 
 .animate-blur-in { animation-name: papyr-blur-in; }
 .animate-glass-pop { animation-name: papyr-glass-pop; }
+
+/* ==========================================
+   WATT PRIVACY BANNER AND CONSENT COMPONENTS
+   ========================================== */
+.watt-banner-pill {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(13, 17, 34, 0.85);
+    border: 1px solid rgba(20, 184, 166, 0.25);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(20, 184, 166, 0.1);
+    border-radius: 99px;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: calc(100% - 48px);
+    max-width: 650px;
+    z-index: 9999;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: watt-slide-in-banner 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes watt-slide-in-banner {
+    to { transform: translateX(-50%) translateY(0); }
+}
+
+@media (max-width: 576px) {
+    .watt-banner-pill {
+        flex-direction: column;
+        border-radius: 16px;
+        padding: 16px;
+        text-align: center;
+        gap: 12px;
+    }
+}
 `;
         document.head.appendChild(style);
         console.log("📄 Papyr Complete styling successfully injected.");

@@ -409,3 +409,42 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 .animate-blur-in { animation-name: papyr-blur-in; }
 .animate-glass-pop { animation-name: papyr-glass-pop; }
 
+/* ==========================================
+   WATT PRIVACY BANNER AND CONSENT COMPONENTS
+   ========================================== */
+.watt-banner-pill {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(13, 17, 34, 0.85);
+    border: 1px solid rgba(20, 184, 166, 0.25);
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.6), 0 0 20px rgba(20, 184, 166, 0.1);
+    border-radius: 99px;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    width: calc(100% - 48px);
+    max-width: 650px;
+    z-index: 9999;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: watt-slide-in-banner 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes watt-slide-in-banner {
+    to { transform: translateX(-50%) translateY(0); }
+}
+
+@media (max-width: 576px) {
+    .watt-banner-pill {
+        flex-direction: column;
+        border-radius: 16px;
+        padding: 16px;
+        text-align: center;
+        gap: 12px;
+    }
+}
+

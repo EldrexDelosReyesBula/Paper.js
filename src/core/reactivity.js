@@ -1,5 +1,5 @@
 /**
- * PAPER REACTIVITY SYSTEM
+ * PAPYR REACTIVITY SYSTEM
  * 
  * Auto-tracking reactive state variables and computed logic nodes.
  */

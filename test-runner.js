@@ -137,9 +137,14 @@ global.navigator = {
     }
 };
 
+let localStoreMock = {};
 global.localStorage = {
-    getItem() { return null; },
-    setItem() {}
+    getItem(key) { return localStoreMock[key] !== undefined ? localStoreMock[key] : null; },
+    setItem(key, val) { localStoreMock[key] = String(val); },
+    removeItem(key) { delete localStoreMock[key]; },
+    key(i) { return Object.keys(localStoreMock)[i] || null; },
+    get length() { return Object.keys(localStoreMock).length; },
+    clear() { localStoreMock = {}; }
 };
 
 global.location = {

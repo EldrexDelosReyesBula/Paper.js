@@ -39,11 +39,11 @@
 
 # 1. Introduction
 
-Papyr.js is a lightweight, zero-dependency frontend library built for creating reactive user interfaces directly with native browser APIs.
+I built Papyr.js as a lightweight, zero-dependency frontend library for creating reactive user interfaces directly with native browser APIs.
 
-Unlike traditional frameworks that rely on virtual DOM diffing, build pipelines, or heavy abstractions, Papyr works directly with real DOM elements while maintaining a simple reactive system.
+Unlike traditional frameworks that rely on virtual DOM diffing, build pipelines, or heavy abstractions, I designed Papyr to work directly with real DOM elements while maintaining a simple reactive system.
 
-Papyr is designed for:
+I designed Papyr for:
 
 * Dashboards
 * Progressive Web Apps (PWAs)
@@ -55,16 +55,16 @@ Papyr is designed for:
 
 ## Key Features
 
-* Zero dependencies
-* Native DOM rendering
-* Fine-grained reactivity
-* Built-in routing
-* Security sanitization
-* Lightweight storage APIs
-* Animation utilities
-* Browser API wrappers
-* Plugin architecture
-* No bundler required
+- I keep the runtime dependency-free.
+- I render directly to the native DOM.
+- I provide fine-grained reactivity.
+- I include built-in routing.
+- I provide sanitization and secure storage helpers.
+- I expose lightweight storage APIs.
+- I include animation utilities.
+- I wrap common Browser APIs for convenience.
+- I maintain a plugin architecture.
+- No bundler is required to use Papyr.
 
 ---
 
@@ -85,7 +85,7 @@ papyr.div(
 
 ## Performance
 
-Papyr avoids expensive render cycles by updating only the reactive parts of the DOM.
+I designed Papyr to avoid expensive render cycles by updating only the reactive parts of the DOM.
 
 Benefits include:
 
@@ -96,7 +96,7 @@ Benefits include:
 
 ## Security
 
-Papyr includes built-in sanitization and encrypted storage helpers to reduce common frontend security risks.
+I include built-in sanitization and encrypted storage helpers to reduce common frontend security risks.
 
 ---
 
@@ -174,7 +174,7 @@ papyr.mount('#app', app);
 
 # 5. Core Concepts
 
-Papyr is composed of several core systems.
+I organized Papyr into several core systems.
 
 | API                | Description               |
 | ------------------ | ------------------------- |
@@ -192,7 +192,7 @@ Papyr is composed of several core systems.
 
 # 6. Element System
 
-Papyr elements are created using function-based DOM builders.
+I implemented Papyr elements as function-based DOM builders.
 
 ## Example
 
@@ -218,6 +218,111 @@ papyr.span(...)
 papyr.fragment(...)
 ```
 
+---
+
+## Vanilla → Papyr Translation Guide
+
+This quick reference helps you convert standard DOM / vanilla JavaScript patterns into the Papyr idioms I provide.
+
+1) Create elements
+
+Vanilla:
+```js
+const el = document.createElement('div');
+el.className = 'card';
+el.id = 'profile';
+el.textContent = 'Hello';
+el.addEventListener('click', () => {});
+document.getElementById('app').appendChild(el);
+```
+
+Papyr:
+```js
+const el = papyr.div('.card#profile', 'Hello', {
+  onclick: () => {}
+});
+papyr.mount('#app', el);
+```
+
+2) Attributes and properties
+
+Vanilla:
+```js
+const img = document.createElement('img');
+img.src = '/avatar.png';
+img.setAttribute('data-id', '42');
+```
+
+Papyr:
+```js
+const img = papyr.img({ src: '/avatar.png', attrs: { 'data-id': '42' } });
+```
+
+3) Classes / IDs shorthand
+
+I support `.class` and `#id` shorthand as string children or the first argument:
+
+```js
+papyr.div('.card.primary#main', 'Content');
+// or
+papyr.div({ class: ['card', 'primary'], id: 'main' }, 'Content');
+```
+
+4) Events
+
+Vanilla:
+```js
+btn.addEventListener('click', () => {});
+```
+
+Papyr:
+```js
+papyr.button('Click', { onclick: () => {} });
+// or using `on` map
+papyr.button('Click', { on: { click: () => {} } });
+```
+
+5) Text nodes and children
+
+Vanilla:
+```js
+const t = document.createTextNode('Hello');
+el.appendChild(t);
+```
+
+Papyr:
+```js
+papyr.div('Hello'); // strings are converted to text nodes
+```
+
+6) Append / mount
+
+Vanilla `appendChild` corresponds to passing children or using `papyr.mount`.
+
+```js
+const child = papyr.p('Child');
+const parent = papyr.div(child);
+papyr.mount('#root', parent);
+```
+
+7) Reactive bindings
+
+In vanilla JavaScript you'd manually update the DOM on state change; I provide `papyr.state` and `papyr.computed` to automate that.
+
+```js
+const count = papyr.state(0);
+const label = papyr.p(() => `Count: ${count.value}`);
+count.value++;
+```
+
+8) Supported tags (common list)
+
+div, span, p, h1-h6, button, a, img, input, textarea, select, option, ul, ol, li, table, thead, tbody, tr, td, th, form, label, section, article, header, footer, nav, aside, main, pre, code, hr, br, strong, em, small, mark, i, b, u, s, audio, video, canvas, svg, details, summary, dialog, template
+
+For edge cases you can always fall back to `papyr('tag', ...)`.
+
+---
+
 ### Typography
 
 ```js
@@ -239,7 +344,7 @@ papyr.img(...)
 
 ## Supported Children Types
 
-Papyr accepts:
+Papyr accepts (I support):
 
 * Strings
 * DOM nodes
@@ -252,7 +357,7 @@ Papyr accepts:
 
 # 7. State Management
 
-Papyr ships with fine-grained reactive state management.
+I ship Papyr with fine-grained reactive state management.
 
 ---
 
@@ -324,7 +429,7 @@ const list = papyr.for(
 
 # 8. Layout Engine
 
-Papyr includes built-in layout utilities for responsive interfaces.
+I include built-in layout utilities for responsive interfaces.
 
 ---
 
@@ -353,7 +458,7 @@ Papyr’s bundled styles include:
 
 # 9. Animation Engine
 
-Papyr supports hardware-accelerated animations with reduced-motion accessibility support.
+I provide hardware-accelerated animations with reduced-motion accessibility support.
 
 ---
 
@@ -401,7 +506,7 @@ papyr.physics({
 
 # 10. Routing
 
-Papyr includes a lightweight hash-based SPA router.
+I include a lightweight hash-based SPA router.
 
 ---
 
@@ -449,7 +554,7 @@ papyr.mount(
 
 # 11. Components
 
-Papyr supports both functional and class-based components.
+I support both functional and class-based components.
 
 ---
 
@@ -482,7 +587,7 @@ class MyCard extends papyr.component {
 
 # 12. Events
 
-Papyr uses standard DOM event bindings.
+I use standard DOM event bindings.
 
 ---
 
@@ -509,7 +614,7 @@ papyr.p(() => {
 
 # 13. Styling System
 
-Papyr includes a built-in premium CSS system with optional framework interoperability.
+I include a built-in premium CSS system with optional framework interoperability.
 
 ---
 
@@ -544,7 +649,7 @@ The bundled CSS includes:
 
 ## Framework Loading
 
-Papyr can dynamically load CSS frameworks.
+I can dynamically load CSS frameworks.
 
 ```js
 papyr.loadFramework('tailwind');
@@ -556,7 +661,7 @@ papyr.loadFramework('bootstrap');
 
 # 14. Security Kernel
 
-Papyr includes a built-in security layer.
+I include a built-in security layer.
 
 ---
 
@@ -638,7 +743,7 @@ papyr.location.request(
 
 # 16. Storage APIs
 
-Papyr includes local, session, and encrypted storage systems.
+I include local, session, and encrypted storage systems.
 
 ---
 
@@ -717,7 +822,7 @@ users.watch(data => {
 
 # 17. Plugin System
 
-Papyr supports modular plugins through `papyr.use()`.
+I support modular plugins through `papyr.use()`.
 
 ---
 
@@ -747,7 +852,7 @@ papyr.use(myPlugin);
 
 # 18. AI Integration
 
-Papyr does not include a built-in AI engine.
+I do not bundle a built-in AI engine.
 
 Instead, AI services should be integrated externally through APIs.
 
@@ -769,7 +874,7 @@ const response =
 
 # 19. Backend Integration
 
-Papyr is backend-agnostic.
+I designed Papyr to be backend-agnostic.
 
 ---
 
@@ -815,7 +920,7 @@ to synchronize local and remote application state.
 
 # 20. Performance
 
-Papyr is optimized for minimal runtime cost.
+I optimized Papyr for minimal runtime cost.
 
 ---
 
@@ -832,7 +937,7 @@ Papyr is optimized for minimal runtime cost.
 
 # 21. Accessibility
 
-Papyr uses standard HTML elements, making accessibility straightforward.
+I use standard HTML elements to make accessibility straightforward.
 
 ---
 
@@ -848,7 +953,7 @@ Papyr uses standard HTML elements, making accessibility straightforward.
 
 # 22. Browser APIs
 
-Papyr wraps several native browser APIs.
+I wrap several native browser APIs for convenience.
 
 ---
 
@@ -898,7 +1003,7 @@ papyr.pwa.init('/sw.js');
 
 # 23. Error Diagnostics
 
-Papyr includes runtime diagnostics and debug tools.
+I include runtime diagnostics and debug tools.
 
 ---
 
@@ -933,7 +1038,7 @@ papyr.debug(true);
 
 # 25. Deployment
 
-Papyr applications can be deployed as static websites.
+You can deploy applications built with Papyr as static websites.
 
 ---
 

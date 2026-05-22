@@ -1,4 +1,4 @@
-// PAPER OFFICIAL PLUGINS BUNDLE
+// PAPYR OFFICIAL PLUGINS BUNDLE
 // Registers the official forms, tables, and micro-charts plugins
 
 (function(window) {
@@ -12,11 +12,13 @@
     // 1. Forms Plugin
     function formPlugin(paper) {
         papyr.input = (type, placeholder, options = {}) => {
-            return papyr('input', `.input-${type}`, {
-                type: type, 
-                placeholder: placeholder, 
-                ...options
-            });
+            if (typeof type === 'object' && type !== null) return papyr('input', type);
+            if (typeof placeholder === 'object' && placeholder !== null) { options = placeholder; placeholder = options.placeholder || ''; }
+            options = Object.assign({}, options);
+            if (type) options.type = options.type || type;
+            if (placeholder) options.placeholder = options.placeholder || placeholder;
+            if (type) return papyr('input', `.input-${type}`, options);
+            return papyr('input', options);
         };
         
         papyr.form = (...fields) => {
