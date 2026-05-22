@@ -1,25 +1,29 @@
 <img width="1650" height="866" alt="Papyr.js banner" src="https://github.com/user-attachments/assets/b72e2615-0db3-4885-a424-a3ef1d094548" />
 
-# Paper.js - HTML made stupid simple 
-> **Write HTML like you're writing a text message.**
+# 📄 Papyrus (papyr.js) — HTML Made Stupid Simple
+> **Write HTML like you're writing a text message. Built with zero-dependency reactive magic, enterprise security, and premium responsive aesthetics.**
 
-Paper.js is an ultra-lightweight JavaScript ecosystem designed to build reactive web applications instantly. With no complex bundlers, terminal setups, or virtual DOM overhead, Paper compiles high-performance DOM trees directly inside native browsers.
+[![MIT License](https://img.shields.io/badge/License-MIT-teal.svg)](#)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-Zero-indigo.svg)](#)
+[![Bundle Size](https://img.shields.io/badge/Minified--Gzipped-~12KB-blue.svg)](#)
 
-Paper.js v3.0 introduces a state-of-the-art **Agile Modular Architecture**, featuring reactive mathematical logic computations (`paper.math`), persistent browser database engines (`paper.crud`), and responsive design system widgets—all integrated seamlessly in under 5 milliseconds!
+Papyrus is an ultra-lightweight, blazing-fast JavaScript library designed to build modern interactive HTML interfaces with absolute zero complexity and zero terminal setups. By bypassing the Virtual DOM entirely and compiling directly to native browser elements, Papyrus delivers stellar runtime speeds while keeping developer cognitive load to a minimum.
+
+Papyrus v3.0 introduces a state-of-the-art **Agile Modular Architecture**, featuring automatic dependency-tracking reactivity, built-in enterprise vault encryption, HTML5 SPA routing, reactive mathematical formula solvers, persistent local databases, and a fluid responsive design system.
 
 ---
 
 ## ⚡ Core Philosophy
-1. **One function. One rule. Zero complexity:** If you know HTML tags, you already know Paper.js.
-2. **XSS-Immune Secure Engines:** Replaces vulnerable `innerHTML` with automatically sanitized `textContent` text nodes.
-3. **No NPM or Terminal Overhead Required:** Simply link our CDN script, and your application is ready to run.
-4. **Tailwind & Bootstrap Auto-Loaders:** Dynamic styler engines automatically inject stylesheets on demand.
+1. **One function. One rule. Zero complexity:** If you know standard HTML tags and JavaScript objects, you already know Papyrus.
+2. **XSS-Immune Secure Engine:** Transparently sanitizes strings, removing dangerous script vectors and pseudo-protocols dynamically.
+3. **No NPM or Terminal Overhead Required:** Just include a single CDN link inside a bare HTML file and hit refresh.
+4. **CSS Spotlight Design System:** Loaded with premium dark grids, radial glows, glassmorphism panel states, and fluid scroll animations out of the box.
 
 ---
 
 ## 🚀 Zero-Download CDN Setup
 
-Get started instantly without installing anything. Link `paper-complete.js` from our Vercel CDN in your `index.html`:
+Get started instantly without installing anything. Link `papyr-complete.js` from our Vercel CDN in your `index.html`:
 
 ```html
 <!DOCTYPE html>
@@ -27,20 +31,20 @@ Get started instantly without installing anything. Link `paper-complete.js` from
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Paper App</title>
-    <!-- Include Paper.js Complete CDN -->
-    <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
+    <title>My Papyrus App</title>
+    <!-- Include Papyrus Complete CDN Bundle -->
+    <script src="https://papyrus-js.vercel.app/papyr-complete.js"></script>
 </head>
 <body>
     <div id="app"></div>
 
     <script>
-        // Mount a beautiful header instantly
-        let app = paper.div(".card",
-            paper.h1("Hello from Paper! ⚡"),
-            paper.p("Everything works out-of-the-box!")
+        // Mount a beautiful responsive card instantly
+        let app = papyr.div(".card",
+            papyr.h1("Hello from Papyrus! ⚡"),
+            papyr.p("Everything works out-of-the-box!")
         );
-        paper.mount("#app", app);
+        papyr.mount("#app", app);
     </script>
 </body>
 </html>
@@ -48,156 +52,179 @@ Get started instantly without installing anything. Link `paper-complete.js` from
 
 ---
 
-## 🧮 Reactive Mathematical Studio (`paper.math`)
-
-Paper.js v3.0 includes an automatic mathematical engine that tracks reactive variables and computes equations reactively in real time. Ideal for live calculator panels, finance trackers, and dashboard statistics.
-
-```javascript
-// 1. Initialize reactive numerical state values
-let price = paper.state(100);
-let discount = paper.state(15);
-let tax = paper.state(8);
-
-// 2. Formulate equations using paper.math (auto-tracks prices and percentages!)
-let discountAmount = paper.math.mul(price, paper.math.div(discount, 100));
-let discountedPrice = paper.math.sub(price, discountAmount);
-let taxAmount = paper.math.mul(discountedPrice, paper.math.div(tax, 100));
-let finalTotal = paper.math.round(paper.math.sum(discountedPrice, taxAmount), 2);
-
-// 3. Bind equations to DOM elements reactively
-let checkoutCard = paper.div(".glass-panel",
-    paper.h3("🛒 Checkout Summary"),
-    paper.p(() => "Base Price: $" + price.value),
-    paper.p(() => "Discounted Subtotal: $" + discountedPrice.value),
-    paper.h2(() => "Grand Total: $" + finalTotal.value)
-);
-```
-
-### Available Mathematical Functions
-* `paper.math.sum(...args)`: Calculates the sum of standard numbers or reactive state nodes.
-* `paper.math.sub(a, b)`: Computes the difference of two reactive states or numbers.
-* `paper.math.mul(...args)`: Computes the reactive product of multiple states or numbers.
-* `paper.math.div(a, b)`: Performs reactive division (with safe check returning `0` if dividing by `0`).
-* `paper.math.avg(...args)`: Returns the reactive mathematical average of all variables.
-* `paper.math.percent(val, total)`: Calculates the reactive percentage of `val` inside `total`.
-* `paper.math.round(val, decimals)`: Dynamic precision rounder for float calculations.
-
----
-
-## 💾 LocalStorage Persistent Database (`paper.crud`)
-
-Say goodbye to complex backend SQL setups or asynchronous fetch calls for simple applications. `paper.crud` sets up a persistent, zero-config local database catalog that auto-synchronizes with `localStorage` reactively.
-
-```javascript
-// 1. Create a persistent store backed by local caching
-let contactStore = paper.crud("dev-directory", [
-    { name: "Eldrex Reyes", role: "Library Author" }
-]);
-
-// 2. Perform CRUD operations reactively!
-// - Create:
-let newContact = contactStore.create({ name: "Satoshi Nakamoto", role: "Protocol Engineer" });
-
-// - Read:
-let satoshi = contactStore.read(newContact.id);
-
-// - Update:
-contactStore.update(satoshi.id, { role: "Bitcoin Inventor" });
-
-// - Delete:
-contactStore.delete(satoshi.id);
-
-// - Clear:
-contactStore.clear();
-```
-
-### Live Filtering Example
-```javascript
-let searchQuery = paper.state('');
-
-// Computed list reactively filters when search input changes
-let filteredContacts = paper.computed(() => {
-    let query = searchQuery.value.toLowerCase().trim();
-    let items = contactStore.items.value; // Reactive database state node
-    return items.filter(x => x.name.toLowerCase().includes(query));
-});
-```
-
----
-
 ## 🔋 Automatic Reactivity & Computed System
 
-Paper.js includes a lightweight Vue/SolidJS-style dependency-tracking reactivity engine. When state values mutate, subscribing DOM text nodes and element properties update automatically:
+Papyrus includes a lightweight, fine-grained dependency-tracking reactivity engine. When state values mutate, subscribing DOM text nodes and element attributes update automatically in real time:
 
 ```javascript
 // 1. Create a reactive state
-let count = paper.state(0);
+let count = papyr.state(0);
 
 // 2. Create an auto-tracking computed property
-let double = paper.computed(() => count.value * 2);
+let double = papyr.computed(() => count.value * 2);
 
-// 3. Bind properties dynamically by passing callbacks
-let counterWidget = paper.flex.col(
-    paper.h3("🔋 Reactive Counter"),
-    paper.p(() => "Count Value: " + count.value),
-    paper.p(() => "Computed Double: " + double.value),
+// 3. Bind elements dynamically by passing callbacks or state values
+let counterWidget = papyr.flex.col(
+    papyr.h3("🔋 Reactive Counter"),
+    papyr.p(() => "Count Value: " + count.value),
+    papyr.p(() => "Computed Double: " + double.value),
     
-    paper.button("Increment Count", {
+    papyr.button("Increment Count", {
+        class: "btn-primary",
         onclick: () => count.value++
     })
 );
 
-paper.mount("#app", counterWidget);
+papyr.mount("#app", counterWidget);
 ```
 
 ---
 
-## 🔌 Premium UI Components & Visual Layouts
+## 🔒 Enterprise Security Vault (`papyr.security`)
 
-Paper.js comes preloaded with beautiful layout primitives and visual components inside the `paper` namespace:
+LocalStorage is highly vulnerable to scraping by malicious browser extensions. Papyrus includes an **Enterprise Security Vault** that encrypts state data transparently using a native XOR+Base64 cipher before committing it to storage, ensuring only authorized clients can read it.
 
-### 1. Flexbox Layouts
 ```javascript
-paper.flex.row(child1, child2);     // flex-direction: row
-paper.flex.col(child1, child2);     // flex-direction: column
-paper.flex.center(child);           // items & content center aligned
-paper.flex.between(child1, child2); // space-between alignment
+const myPassword = "developer-key-2026";
+const sensitiveUser = { name: "Eldrex Reyes", key: "super-secret-token-xyz" };
+
+// Encrypt and commit safely to browser memory
+papyr.storage.secureSet("user-session", sensitiveUser, myPassword);
+// raw LocalStorage stores: "Q0ZGVVZDVVVSRVJDRkVVVlVTRVJD" (scrambled cipher text)
+
+// Decrypt transparently back into a native JavaScript object
+const decryptedUser = papyr.storage.secureGet("user-session", myPassword);
+console.log(decryptedUser.name); // "Eldrex Reyes"
 ```
 
-### 2. Autocomplete Suggestions
+---
+
+## 📱 Advanced Fluid Mobile Responsiveness
+
+The Papyrus layout engine features native, mobile-aware breakpoints and structure systems. High-end split layouts and dashboards break gracefully and stack vertically on screens under 768px.
+
+### Key Responsive Helpers
+* **`.crud-grid` & `.responsive-split-grid`**: CSS layout classes that stack responsive multi-column configurations into 1-column layouts on smartphones.
+* **`.mobile-header` & `.menu-toggle`**: Built-in sticky header rules for mobile collapsible sidebars, allowing developers to create highly interactive navigation sliders seamlessly.
+* **Reactive Menu Synchronization**: Synchronize mobile sidebar slide-ins with `papyr.state()` to keep documentation clean and uncluttered.
+
+---
+
+## 🧮 Reactive Mathematical Studio (`papyr.math`)
+
+Formulate complex reactive equation trees instantly. Perfect for financial models, interactive shopping carts, and dynamic dashboards that update computed fields reactively whenever variables change.
+
 ```javascript
-let input = paper.autoComplete(
-    ['United States', 'Canada', 'Mexico', 'United Kingdom'],
-    'Search Countries...'
+let price = papyr.state(100);
+let discount = papyr.state(15);
+let tax = papyr.state(8);
+
+// Automatically tracks prices and updates totals reactively!
+let discountAmount = papyr.math.mul(price, papyr.math.div(discount, 100));
+let discountedPrice = papyr.math.sub(price, discountAmount);
+let taxAmount = papyr.math.mul(discountedPrice, papyr.math.div(tax, 100));
+let finalTotal = papyr.math.round(papyr.math.sum(discountedPrice, taxAmount), 2);
+
+let checkoutCard = papyr.div(".glass-panel",
+    papyr.h3("🛒 Checkout Summary"),
+    papyr.p(() => "Base Price: $" + price.value),
+    papyr.p(() => "Discounted Subtotal: $" + discountedPrice.value),
+    papyr.h2(() => "Grand Total: $" + finalTotal.value)
 );
-input.addEventListener('change', (e) => console.log('Selected:', e.detail));
 ```
 
-### 3. Gorgeous Dialog Modals
+### Available Mathematical Functions
+* `papyr.math.sum(...args)`: Calculates the reactive sum of numerical elements.
+* `papyr.math.sub(a, b)`: Computes the difference of two reactive states.
+* `papyr.math.mul(...args)`: Computes the product of states or numbers.
+* `papyr.math.div(a, b)`: Performs division (safely returns `0` if dividing by `0`).
+* `papyr.math.avg(...args)`: Returns the average of all numbers.
+* `papyr.math.percent(val, total)`: Calculates the percentage of `val` in `total`.
+* `papyr.math.round(val, decimals)`: Precision decimal rounder.
+
+---
+
+## 💾 Persistent CRUD Databases (`papyr.crud`)
+
+Create lightweight, fully persistent CRUD databases in standard client architectures with zero API configuration. CRUD changes instantly persist to LocalStorage and reflect reactively in the UI.
+
 ```javascript
-let modal = paper.modal(
-    paper.div(
-        paper.p("Dynamic popup message inside native DOM!"),
-        paper.button("Close", { onclick: () => modal.hide() })
+// 1. Initialize persistent catalog
+let store = papyr.crud("task-manager", [
+    { title: "Review Papyrus specifications", done: true }
+]);
+
+// 2. Perform CRUD operations reactively
+let task = store.create({ title: "Build responsive layout", done: false });
+store.update(task.id, { done: true });
+store.delete(task.id);
+store.clear(); // Clear all catalog entries
+```
+
+---
+
+## 🔌 Premium UI Primitives & Visual Widgets
+
+Papyrus comes pre-packaged with beautiful layout primitives and interactive visual widgets:
+
+### 1. Flexbox Layout Primitives
+```javascript
+papyr.flex.row(child1, child2);     // Flex-row direction layout
+papyr.flex.col(child1, child2);     // Vertical flex-column layout
+papyr.flex.center(child);           // Center items horizontally & vertically
+papyr.flex.between(child1, child2); // Spacer-between layout alignment
+```
+
+### 2. Dialog Modals & Interactive Alerts
+```javascript
+// Dialog Popups
+let modal = papyr.modal(
+    papyr.div(
+        papyr.p("Popup dialog message in native DOM!"),
+        papyr.button("Close Modal", { onclick: () => modal.hide() })
     ),
     "System Alert"
 );
-document.body.appendChild(modal);
-modal.show(); // Display modal with smooth background masks
-```
+modal.show();
 
-### 4. Interactive Toast Alerts
-```javascript
-paper.toast("Action successful!", "success"); // Teal green notification
-paper.toast("Something went wrong.", "error");   // Rose red compile error indicator
-paper.toast("Log notification...", "info");     // Cyan blue info toast
+// Toast Notifications
+papyr.toast("Vault successfully updated!", "success"); // Teal green
+papyr.toast("Unauthorized action.", "error");          // Rose pink
+papyr.toast("Loading resources...", "info");           // Indigo/blue
 ```
 
 ---
 
-## 🐍 Gen Z Python Companion CLI Tool (`paper.py`)
+## 🛡️ Spellcheck Debugger Warnings
 
-A zero-dependency CLI developer companion for blazing-fast development workflows:
+Papyrus protects beginners from spelling tag typos through a Levenshtein distance matching engine. If a tag is typed incorrectly (e.g. `papyr.buton`), an event warning is dispatched automatically detailing spelling suggestions:
+
+```javascript
+// Deliberate spelling warning trigger:
+let myBtn = papyr.buton("Click me"); 
+// Console output warning: "PapyrWarning: Unknown tag 'buton'. Did you mean 'button'?"
+```
+
+---
+
+## 🔌 Open-Source Namespace Harmony (`papyr.noConflict`)
+
+Need to drop Papyrus into a legacy application that already uses the global variable `window.papyr`? The library includes a built-in safety switch to restore the original global namespace.
+
+```javascript
+// Release control of the global variable
+const myPapyr = papyr.noConflict();
+
+// window.papyr is restored to its original value.
+// You can now safely use myPapyr as your handle!
+myPapyr.mount("#app", myPapyr.div("Safe Namespace Element!"));
+```
+
+---
+
+## 🐍 Dev Companion Scaffolder CLI (`paper.py`)
+
+A zero-dependency CLI developer companion for fast, automated development workflows:
 
 ### 1. Scaffold a project instantly
 ```bash
@@ -209,28 +236,17 @@ Generates a gorgeous, pre-configured reactive starting template in **less than 5
 ```bash
 python paper.py dev [port]
 ```
-Spins up a lightweight web server (default port `8000`), overrides standard Windows registry issues, and serves JavaScript files correctly as `application/javascript` to bypass browser MIME blocks.
-
----
-
-## 🛠️ Spellcheck debugger warnings
-
-Paper.js protects beginners from spelling tag typos through a Levenshtein distance matching engine. If a tag is typed incorrectly (e.g. `paper.buton`), an event warning is dispatched automatically detailing spelling suggestions:
-
-```javascript
-// Deliberate spelling warning trigger:
-let myBtn = paper.buton("Click me"); 
-// Console output warning: "PaperError: Unknown tag 'buton'. Did you mean 'button'?"
-```
+Spins up a lightweight web server (default port `8000`), overrides standard Windows registry issues, and serves Javascript files correctly as `application/javascript` to bypass browser MIME blocks.
 
 ---
 
 ## 🤝 Contribution & Collaboration
 
-Paper.js is fully open-source and customizable. We encourage you to fork, submit issues, add custom canvas plugins, and help make frontend development simpler!
+Papyrus is fully open-source and customizable. We encourage you to fork, submit issues, add custom canvas plugins, and help make frontend development simpler!
 
-* **GitHub Repository:** [https://github.com/EldrexDelosReyesBula/Paper.js/](https://github.com/EldrexDelosReyesBula/Paper.js/)
-* **CDN Link:** `https://eldrex-paper-js.vercel.app/paper-complete.js`
+* **GitHub Repository:** [https://github.com/EldrexDelosReyesBula/Papyrus/](https://github.com/EldrexDelosReyesBula/Papyrus/)
+* **CDN Link:** `https://papyrus-js.vercel.app/papyr-complete.js`
 * **Agile Architectural Contribution Guide:** [CONTRIBUTING.md](file:///c:/Users/Eldrex/Downloads/paper/CONTRIBUTING.md)
 
 *Released under the MIT License. Crafted with absolute zero dependencies.*
+
