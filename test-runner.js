@@ -11,7 +11,7 @@ global.DocumentFragment = class DocumentFragment {};
 global.window = global;
 global.document = {
     createElement(tag) {
-        return {
+        const el = {
             tagName: tag.toUpperCase(),
             style: {},
             dataset: {},
@@ -63,6 +63,20 @@ global.document = {
                 }
             }
         };
+        if (tag.toLowerCase() === 'template') {
+            el.content = {
+                cloneNode() {
+                    return {
+                        tagName: 'TEMPLATE-CONTENT',
+                        children: [],
+                        appendChild(c) { return c; },
+                        querySelector() { return null; },
+                        querySelectorAll() { return []; }
+                    };
+                }
+            };
+        }
+        return el;
     },
     createElementNS(ns, tag) {
         return this.createElement(tag);
@@ -134,6 +148,7 @@ global.location = {
 
 global.CustomEvent = class CustomEvent {};
 global.addEventListener = () => {};
+global.dispatchEvent = () => {};
 global.requestAnimationFrame = (cb) => cb();
 global.MutationObserver = class MutationObserver {
     observe() {}

@@ -372,3 +372,40 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
         padding: 2rem 1.5rem;
     }
 }
+
+.crud-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+}
+@media (max-width: 768px) {
+    .crud-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.responsive-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+@media (max-width: 768px) {
+    .responsive-split-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Custom animations for papyr complete */
+@keyframes papyr-blur-in {
+    0% { opacity: 0; filter: blur(12px); transform: translateY(20px); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes papyr-glass-pop {
+    0% { opacity: 0; transform: scale(0.93) translateY(15px); }
+    70% { transform: scale(1.01) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-blur-in { animation-name: papyr-blur-in; }
+.animate-glass-pop { animation-name: papyr-glass-pop; }
+

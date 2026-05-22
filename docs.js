@@ -119,23 +119,77 @@ papyr.route('#/docs/getting-started', GettingStarted);
 papyr.route('#/docs/comparison', Comparison);
 papyr.route('#/docs/troubleshooting', CommonErrors);
 
-// Sidebar Navigation
+// Sidebar Navigation and Reactive Collapsible State
+let isMenuOpen = papyr.state(false);
+let currentPath = papyr.state(window.location.hash || '#/docs.html');
+
+window.addEventListener('hashchange', () => {
+    currentPath.value = window.location.hash;
+    isMenuOpen.value = false; // Auto-close menu on navigation
+});
+
+const getSvgLogo = (size = 32, animated = false) => {
+    const hoverStyle = animated ? `cursor: pointer; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);` : '';
+    const hoverEvents = animated ? `onmouseover="this.style.transform='scale(1.15) rotate(5deg)'" onmouseout="this.style.transform='scale(1) rotate(0deg)'"` : '';
+    return papyr.html(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}" style="display: block; filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.35)); ${hoverStyle}" ${hoverEvents}>
+            <defs>
+                <linearGradient id="logo-hex-grad-docs" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6366f1" />
+                    <stop offset="100%" stop-color="#4f46e5" />
+                </linearGradient>
+                <linearGradient id="logo-p-grad-docs" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#14b8a6" />
+                    <stop offset="100%" stop-color="#06b6d4" />
+                </linearGradient>
+            </defs>
+            <polygon points="50,5 90,28 90,72 50,95 10,72 10,28" fill="rgba(10, 15, 30, 0.65)" stroke="url(#logo-hex-grad-docs)" stroke-width="6" stroke-linejoin="round" />
+            <path d="M35,28 L35,72" stroke="url(#logo-hex-grad-docs)" stroke-width="10" stroke-linecap="round" />
+            <path d="M35,28 C55,28 68,36 68,46 C68,56 55,60 35,60" fill="none" stroke="url(#logo-p-grad-docs)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M35,46 L52,46 L35,60" fill="rgba(20, 184, 166, 0.15)" stroke="none" />
+        </svg>
+    `);
+};
+
+// 1. Mobile Top Sticky Header
+const MobileHeader = () => {
+    return papyr.div('.mobile-header',
+        papyr.a('.mobile-logo', { href: '#' },
+            getSvgLogo(28),
+            papyr.span("Papyr Docs")
+        ),
+        papyr.button('.menu-toggle',
+            { 
+                onclick: () => isMenuOpen.value = !isMenuOpen.value 
+            },
+            () => isMenuOpen.value ? '✕' : '☰'
+        )
+    );
+};
+
+// 2. Sidebar Backdrop Overlay
+const SidebarOverlay = () => {
+    return papyr.div({
+        class: papyr.computed(() => isMenuOpen.value ? 'sidebar-overlay active' : 'sidebar-overlay'),
+        onclick: () => isMenuOpen.value = false
+    });
+};
+
 const Sidebar = () => {
-    // Current path tracking for active styles
-    let currentPath = papyr.state(window.location.hash || '#/docs.html');
-    window.addEventListener('hashchange', () => currentPath.value = window.location.hash);
-    
     const Link = (path, label) => {
         return papyr.a(label, {
             href: path,
-            class: papyr.computed(() => currentPath.value === path ? 'sidebar-link active' : 'sidebar-link')
+            class: papyr.computed(() => currentPath.value === path ? 'sidebar-link active' : 'sidebar-link'),
+            onclick: () => isMenuOpen.value = false
         });
     };
 
-    return papyr.div('.sidebar',
+    return papyr.div({
+        class: papyr.computed(() => isMenuOpen.value ? 'sidebar open' : 'sidebar')
+    },
         papyr.div({ style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem', padding: '0 1rem' } },
-            papyr.img({ src: 'https://eldrex.landecs.org/logo/eldrex-papyr-js.png', width: 32, height: 32 }),
-            papyr.h2("Papyr.js", { style: { margin: 0, fontSize: '1.2rem', border: 'none' } })
+            getSvgLogo(32, true),
+            papyr.h2("Papyr.js", { style: { margin: 0, fontSize: '1.2rem', border: 'none', color: '#fff' } })
         ),
         
         papyr.div('.nav-section', { style: { marginBottom: '1.5rem' } },
@@ -154,6 +208,8 @@ const Sidebar = () => {
 
 // App Layout Structure
 const DocsLayout = papyr.div(
+    MobileHeader(),
+    SidebarOverlay(),
     Sidebar(),
     papyr.div('.content-area',
         papyr.router()

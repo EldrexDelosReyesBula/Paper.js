@@ -5,7 +5,7 @@
 (function() {
     // Styles are bundled natively via build.js into papyr-complete-styles
 
-    const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+    const prefersReducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
     // Intersection Observer for scroll animations
     let observer = null;
@@ -35,14 +35,14 @@
 
     // Override papyr-core.js to intercept 'animate' attribute
     const originalPapyr = window.papyr;
-    if (originalPaper) {
+    if (originalPapyr) {
         // We will monkey-patch the original papyr function or use a plugin hook
         // Since papyr is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
         // Actually, the easiest way is to add a hook in papyr-core.js. 
         // But to keep it self-contained, we can observe the DOM for [data-animate] or [animate].
         // Alternatively, since papyr-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
         
-        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop'];
+        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop', 'fade-in', 'slide-up', 'slide-down', 'zoom-in', 'blur-in'];
         const levenshtein = (a, b) => {
             const matrix = [];
             for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -108,7 +108,7 @@
             let scrollY = window.scrollY;
             elements.forEach(el => {
                 let yPos = -(scrollY * speed);
-                el.style.transform = 	ranslateY(px);
+                el.style.transform = `translateY(${yPos}px)`;
             });
         });
     };
@@ -139,7 +139,7 @@
                         vy *= friction;
                     }
                     
-                    el.style.transform = 	ranslateY(px);
+                    el.style.transform = `translateY(${y}px)`;
                 }
                 animationFrame = requestAnimationFrame(update);
             };
@@ -160,7 +160,7 @@
             window.addEventListener('mousemove', (e) => {
                 if (isDragging) {
                     y += e.movementY;
-                    el.style.transform = 	ranslateY(px);
+                    el.style.transform = `translateY(${y}px)`;
                 }
             });
 

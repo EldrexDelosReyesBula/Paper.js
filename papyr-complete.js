@@ -1825,7 +1825,7 @@ papyr.auth = {
 (function() {
     // Styles are bundled natively via build.js into papyr-complete-styles
 
-    const prefersReducedMotion = typeof window !== 'undefined' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+    const prefersReducedMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
     
     // Intersection Observer for scroll animations
     let observer = null;
@@ -1855,14 +1855,14 @@ papyr.auth = {
 
     // Override papyr-core.js to intercept 'animate' attribute
     const originalPapyr = window.papyr;
-    if (originalPaper) {
+    if (originalPapyr) {
         // We will monkey-patch the original papyr function or use a plugin hook
         // Since papyr is a function, we can wrap it, or we can use a MutationObserver to catch new elements with animate attr.
         // Actually, the easiest way is to add a hook in papyr-core.js. 
         // But to keep it self-contained, we can observe the DOM for [data-animate] or [animate].
         // Alternatively, since papyr-core sets properties, we can just intercept `el.setAttribute('animate', val)`.
         
-        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop'];
+        const VALID_ANIMATIONS = ['fade', 'slide', 'zoom', 'blur', 'rotate', 'bounce', 'elastic', 'glass-pop', 'fade-in', 'slide-up', 'slide-down', 'zoom-in', 'blur-in'];
         const levenshtein = (a, b) => {
             const matrix = [];
             for (let i = 0; i <= b.length; i++) matrix[i] = [i];
@@ -1928,7 +1928,7 @@ papyr.auth = {
             let scrollY = window.scrollY;
             elements.forEach(el => {
                 let yPos = -(scrollY * speed);
-                el.style.transform = 	ranslateY(px);
+                el.style.transform = `translateY(${yPos}px)`;
             });
         });
     };
@@ -1959,7 +1959,7 @@ papyr.auth = {
                         vy *= friction;
                     }
                     
-                    el.style.transform = 	ranslateY(px);
+                    el.style.transform = `translateY(${y}px)`;
                 }
                 animationFrame = requestAnimationFrame(update);
             };
@@ -1980,7 +1980,7 @@ papyr.auth = {
             window.addEventListener('mousemove', (e) => {
                 if (isDragging) {
                     y += e.movementY;
-                    el.style.transform = 	ranslateY(px);
+                    el.style.transform = `translateY(${y}px)`;
                 }
             });
 
@@ -3106,6 +3106,42 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
         padding: 2rem 1.5rem;
     }
 }
+
+.crud-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 2rem;
+}
+@media (max-width: 768px) {
+    .crud-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.responsive-split-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+@media (max-width: 768px) {
+    .responsive-split-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Custom animations for papyr complete */
+@keyframes papyr-blur-in {
+    0% { opacity: 0; filter: blur(12px); transform: translateY(20px); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+@keyframes papyr-glass-pop {
+    0% { opacity: 0; transform: scale(0.93) translateY(15px); }
+    70% { transform: scale(1.01) translateY(-2px); }
+    100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.animate-blur-in { animation-name: papyr-blur-in; }
+.animate-glass-pop { animation-name: papyr-glass-pop; }
 `;
         document.head.appendChild(style);
         console.log("📄 Papyr Complete styling successfully injected.");

@@ -159,21 +159,43 @@ return app;`
     // MODULE COMPONENT GENERATORS
     // ==========================================
 
+    const getSvgLogo = (size = 90) => {
+        return papyr.html(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="${size}" height="${size}" style="display: block; margin: 0 auto 2rem auto; filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.45)); cursor: pointer; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);" onmouseover="this.style.transform='scale(1.15) rotate(5deg)'" onmouseout="this.style.transform='scale(1) rotate(0deg)'">
+                <defs>
+                    <linearGradient id="logo-hex-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#6366f1" />
+                        <stop offset="100%" stop-color="#4f46e5" />
+                    </linearGradient>
+                    <linearGradient id="logo-p-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#14b8a6" />
+                        <stop offset="100%" stop-color="#06b6d4" />
+                    </linearGradient>
+                    <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="6" result="blur" />
+                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                </defs>
+                <!-- Hexagon Frame -->
+                <polygon points="50,5 90,28 90,72 50,95 10,72 10,28" fill="rgba(10, 15, 30, 0.65)" stroke="url(#logo-hex-grad)" stroke-width="6" stroke-linejoin="round" />
+                
+                <!-- Glow hexagon underneath -->
+                <polygon points="50,5 90,28 90,72 50,95 10,72 10,28" fill="none" stroke="#6366f1" stroke-width="12" stroke-linejoin="round" opacity="0.25" filter="url(#logo-glow)" />
+
+                <!-- Folded Letter 'P' -->
+                <path d="M35,28 L35,72" stroke="url(#logo-hex-grad)" stroke-width="10" stroke-linecap="round" />
+                <path d="M35,28 C55,28 68,36 68,46 C68,56 55,60 35,60" fill="none" stroke="url(#logo-p-grad)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+                
+                <!-- Origami Fold Diagonal Accent -->
+                <path d="M35,46 L52,46 L35,60" fill="rgba(20, 184, 166, 0.15)" stroke="none" />
+            </svg>
+        `);
+    };
+
     // 1. Radiant Hero
     const Hero = () => {
         return papyr.div(".hero-wrapper.container",
-            papyr.img({ 
-                src: 'https://eldrex.landecs.org/logo/eldrex-papyr-js.png', 
-                alt: 'Papyr.js Logo',
-                style: { 
-                    maxHeight: '90px', 
-                    marginBottom: '2rem', 
-                    display: 'block', 
-                    marginLeft: 'auto', 
-                    marginRight: 'auto',
-                    filter: 'drop-shadow(0 0 15px rgba(99, 102, 241, 0.4))'
-                } 
-            }),
+            getSvgLogo(90),
             papyr.span(".hero-tag", 
                 papyr.icon('bolt', { size: 14, style: { marginRight: '4px' } }),
                 "v3.0 - Agile Architecture & Mathematical CRUD"
@@ -1458,7 +1480,7 @@ console.log(token.user); // "admin"`,
                 papyr.div(".glass-panel", { style: { padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' } },
                     papyr.h3("Calculated Reactive Results", { style: { color: '#fff', margin: '0' } }),
                     
-                    papyr.div({ style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' } },
+                    papyr.div(".responsive-split-grid",
                         papyr.div(".card", { style: { padding: '1rem', background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' } },
                             papyr.p("Sum (A + B + C)", { style: { fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0' } }),
                             papyr.h2(papyr.math.sum(mathA, mathB, mathC), { style: { color: '#fff', margin: '8px 0 0 0' } })
@@ -1645,7 +1667,7 @@ console.log(token.user); // "admin"`,
                 "Store, filter, and modify records in a database backed completely by `papyr.db`. Refresh the page - all changes are persistent natively in your local browser storage!"
             ),
             
-            papyr.div(".grid", { style: { gridTemplateColumns: '300px 1fr', gap: '2rem' } },
+            papyr.div(".crud-grid",
                 // Create Sidebar Form
                 papyr.div(".glass-panel", { style: { padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' } },
                     papyr.h3("Add Safe Record", { style: { color: '#fff', margin: '0' } }),
