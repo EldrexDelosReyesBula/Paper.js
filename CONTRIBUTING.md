@@ -47,6 +47,7 @@ We do not use Webpack, Rollup, or Vite for compilation. Instead, we use a zero-d
 ### Build Targets
 1. **`papyr.js` (Core Bundle)**: Bundles only core compiler files in `src/core/` inside a secure IIFE closure. Ideal for lightweight layouts.
 2. **`papyr-complete.js` (Complete Showcase Bundle)**: Combines all core files, official visual plugins, and auto-injects all CSS tokens from `src/styles/complete.css` so users can link one script and start coding immediately!
+   * **CDN Link:** `https://papyrus-js.vercel.app/papyr-complete.js`
 
 ### How to Compile
 Run the compiler from the root of the project:
@@ -88,6 +89,49 @@ node test-runner.js
 * **State Mutability**: Maintain reactive principles. Modify reactive state values by setting the `.value` property (e.g., `myState.value = newValue`) rather than reassigning variables.
 * **Namespace Protection**: Use `papyr.noConflict()` support for multi-library scenarios to make sure our namespace doesn't block developers already using `window.papyr`.
 * **Keep it Easy**: Code should be so intuitive that a developer can understand it within 2 minutes. Prioritize clean comments and comprehensive docstrings.
+
+---
+
+# ❤️ Support Papyr.js
+
+Papyr.js is an open-source project focused on making web development
+simpler, more expressive, and beginner-friendly.
+
+If Papyr.js helped you build, learn, or prototype faster,
+you can support the project here:
+
+<a href="https://www.paypal.com/ncp/payment/FXUVK7HA9E6M2"
+   target="_blank"
+   style="
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:14px 24px;
+      border-radius:18px;
+      background:#0070ba;
+      color:white;
+      text-decoration:none;
+      font-weight:600;
+      font-family:Inter,sans-serif;
+      box-shadow:0 10px 30px rgba(0,0,0,.2);
+      transition:.3s;
+   ">
+   ❤️ Support Papyr.js
+</a>
+
+Papyr.js is developed independently to help students,
+designers and developers build modern web experiences faster.
+
+Supporting the project helps improve:
+- Documentation
+- Animations
+- Components
+- Security systems
+- Developer tools
+- Offline-first support
+
+Support here:
+https://www.paypal.com/ncp/payment/FXUVK7HA9E6M2
 
 ---
 
