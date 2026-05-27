@@ -1,12 +1,11 @@
 /**
- * PAPER STATIC SITE LIBRARY - Complete Showcase Bundle
+ * PAPER STATIC SITE LIBRARY - Complete Showcase Bundle (ESM)
  * v3.0 - Core Reactivity, SPA Routing, Reactive Math Logic, Persistent Local CRUD Database, Responsive Widgets
  * Released under MIT License.
  */
 
-(function(window) {
-    let activeEffect = null;
-    let isDebug = false;
+let activeEffect = null;
+let isDebug = false;
 
 // --- MODULE: core/papyr-core.js ---
 /**
@@ -3124,9 +3123,10 @@ if (typeof window !== 'undefined' && !window.papyr) {
 
 
 
-    // Export to global window context BEFORE loading plugins
-    window.papyr = createPapyr();
-    const papyr = window.papyr;
+const papyr = createPapyr();
+if (typeof window !== 'undefined') {
+    window.papyr = papyr;
+}
 
 // --- MODULE: plugins/official.js ---
 /**
@@ -7998,11 +7998,11 @@ if (typeof window !== 'undefined' && !window.papyr) {
 
 
 
-    // Auto-inject Themeable Stylesheets
-    if (typeof document !== 'undefined') {
-        const style = document.createElement('style');
-        style.id = 'papyr-complete-styles';
-        style.textContent = `
+// Auto-inject Themeable Stylesheets
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.id = 'papyr-complete-styles';
+    style.textContent = `
 :root {
     --papyr-primary: #6366f1;
     --papyr-primary-hover: #4f46e5;
@@ -8583,8 +8583,9 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
     line-height: 1.5;
 }
 `;
-        document.head.appendChild(style);
-        console.log("📄 Papyr Complete styling successfully injected.");
-    }
+    document.head.appendChild(style);
+    console.log("📄 Papyr Complete styling successfully injected.");
+}
 
-})(typeof window !== 'undefined' ? window : this);
+export { papyr, createPapyr };
+export default papyr;

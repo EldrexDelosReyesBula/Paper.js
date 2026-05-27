@@ -55,6 +55,33 @@ coreInitializers.push((papyr) => {
         }
     }
 
+    // Hybrid function wrapper to support both ORM class constructor and reactivity mixin
+    function modelWrapper(stateOrData) {
+        if (new.target) {
+            // Called with 'new' - acts as the ORM class constructor
+            return new PapyrModel(stateOrData);
+        } else {
+            // Called as a function - acts as the reactivity model mixin
+            return {
+                value: () => stateOrData.value,
+                oninput: (e) => {
+                    if (e.target.type === 'checkbox') {
+                        stateOrData.value = e.target.checked;
+                    } else if (e.target.type === 'number') {
+                        stateOrData.value = parseFloat(e.target.value) || 0;
+                    } else {
+                        stateOrData.value = e.target.value;
+                    }
+                }
+            };
+        }
+    }
+
+    // Inherit static methods and prototype from PapyrModel
+    Object.setPrototypeOf(modelWrapper, PapyrModel);
+    modelWrapper.prototype = Object.create(PapyrModel.prototype);
+    modelWrapper.prototype.constructor = modelWrapper;
+
     // Global exposure on the active kernel instance
-    papyr.model = PapyrModel;
+    papyr.model = modelWrapper;
 });

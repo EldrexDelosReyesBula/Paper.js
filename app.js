@@ -461,6 +461,396 @@ let mathNum = papyr.state(4.6);
 let dateState = papyr.state(new Date().toString());
 let errorMsg = papyr.state('');
 
+// Premium MDN Core Curriculum Sandbox States & Helper Functions
+let jsEvalCode = papyr.state("const fruits = ['Apple', 'Banana', 'Cherry'];\\nfruits.map(f => f.toUpperCase()).join(' - ');");
+let jsEvalResult = papyr.state('');
+let introspectInput = papyr.state("{ title: 'MDN JS Guide', level: 'Intermediate', rating: 4.8 }");
+let introspectResult = papyr.state('[]');
+let serializeInput = papyr.state("function processUser(id) {\\n  const active = true;\\n  return { id, active };\\n}");
+let serializedOutput = papyr.state('');
+
+let samenessVal1 = papyr.state('0');
+let samenessVal2 = papyr.state('false');
+let setInputValue = papyr.state('Classic');
+let setElements = papyr.state(['Modern', 'Classic', 'Fantasy']);
+let mapInputKey = papyr.state('discount');
+let mapInputValue = papyr.state('15%');
+let mapEntries = papyr.state([['theme', 'dark'], ['currency', 'USD']]);
+
+let closureCounters = papyr.state([]);
+let closureCountSeq = 0;
+
+let asyncLogs = papyr.state([]);
+let asyncProgress = papyr.state('idle');
+
+let protoInputExpr = papyr.state('new Date()');
+let protoChainList = papyr.state([]);
+let gcSweepActive = papyr.state(false);
+let gcNodes = papyr.state([
+  { id: '1', name: 'Global Scope', type: 'root', reachable: true },
+  { id: '2', name: 'Active Component State', type: 'child', reachable: true },
+  { id: '3', name: 'Lexical Closure Cache', type: 'child', reachable: true },
+  { id: '4', name: 'Detached DOM Reference', type: 'detached', reachable: false },
+  { id: '5', name: 'Unused Event Callback', type: 'detached', reachable: false }
+]);
+
+// New Comprehensive MDN Core Curriculum additions
+let primitiveValType = papyr.state('symbol');
+let primitiveOutput = papyr.state("Click a primitive type below to run interactive proof cases!");
+let regexPattern = papyr.state('\\\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\\\.[A-Za-z]{2,}\\\\b');
+let regexText = papyr.state('Contact us at support@mdn-guide.com or sales@example.org.');
+let regexMatchResult = papyr.state('');
+let classOutput = papyr.state('');
+let operatorExpr = papyr.state('typeof [] === "object" && [] instanceof Array');
+let operatorResult = papyr.state('');
+
+const runPrimitiveExplorer = (type) => {
+    primitiveValType.value = type;
+    if (type === 'symbol') {
+        primitiveOutput.value = "const sym1 = Symbol('id');\\nconst sym2 = Symbol('id');\\nconsole.log(sym1 === sym2); // false (guaranteed unique)\\n\\nResult: " + String(Symbol('id') === Symbol('id'));
+        papyr.toast('Symbol uniqueness validated!', 'success');
+    } else if (type === 'bigint') {
+        let bigVal = 2n ** 53n + 1n;
+        primitiveOutput.value = "const maxSafeInt = Number.MAX_SAFE_INTEGER; // 9007199254740991\\nconst big = 2n ** 53n + 1n; // 9007199254740993n\\n\\nResult: " + bigVal + "n (Handles arbitrary precision!)";
+        papyr.toast('BigInt precision validated!', 'success');
+    } else if (type === 'null_undef') {
+        primitiveOutput.value = "console.log(typeof null); // 'object' (historic bug)\\nconsole.log(typeof undefined); // 'undefined'\\nconsole.log(null == undefined); // true (coerced)\\nconsole.log(null === undefined); // false (strict equality)";
+        papyr.toast('Null & Undefined comparisons executed!', 'success');
+    } else if (type === 'primitives_list') {
+        primitiveOutput.value = "Primitive Types in JavaScript:\\n- Undefined (typeof undefined === 'undefined')\\n- Null (typeof null === 'object')\\n- Boolean (typeof true === 'boolean')\\n- Number (typeof 42 === 'number')\\n- BigInt (typeof 42n === 'bigint')\\n- String (typeof 'hello' === 'string')\\n- Symbol (typeof Symbol() === 'symbol')";
+        papyr.toast('Primitives taxonomy printed!', 'info');
+    }
+};
+
+const setEqualityPreset = (preset) => {
+    if (preset === 'nan') {
+        samenessVal1.value = 'NaN';
+        samenessVal2.value = 'NaN';
+        papyr.toast('Loaded NaN vs NaN case!', 'info');
+    } else if (preset === 'coercion') {
+        samenessVal1.value = '0';
+        samenessVal2.value = 'false';
+        papyr.toast('Loaded 0 vs false case!', 'info');
+    } else if (preset === 'zero') {
+        samenessVal1.value = '+0';
+        samenessVal2.value = '-0';
+        papyr.toast('Loaded +0 vs -0 case!', 'info');
+    } else if (preset === 'array') {
+        samenessVal1.value = '[]';
+        samenessVal2.value = '![]';
+        papyr.toast('Loaded [] vs ![] case!', 'info');
+    }
+};
+
+const runClassDemo = () => {
+    try {
+        class Book {
+            constructor(title, author) {
+                this._title = title;
+                this._author = author;
+            }
+            get info() { return this._title + ' by ' + this._author; }
+            set author(newAuthor) { this._author = newAuthor; }
+            static format(b) { return '[BOOK] ' + b.info; }
+        }
+        const myBook = new Book('Pride and Prejudice', 'Jane Austen');
+        let initial = myBook.info;
+        myBook.author = 'Austen';
+        let updated = myBook.info;
+        classOutput.value = [
+            "1. Class Instantiated: new Book('Pride and Prejudice', 'Jane Austen')",
+            "2. Getter (myBook.info): " + initial,
+            "3. Setter Updated Author to 'Austen'",
+            "4. Getter after Setter: " + updated,
+            "5. Static Method (Book.format(myBook)): " + Book.format(myBook)
+        ].join('\\n');
+        papyr.toast('ES6 Class and accessors validated!', 'success');
+    } catch(e) {
+        classOutput.value = 'Error: ' + e.message;
+        papyr.toast('Class Demo Error!', 'error');
+    }
+};
+
+const testRegex = () => {
+    try {
+        let re = new RegExp(regexPattern.value, 'g');
+        let matches = [];
+        let match;
+        while ((match = re.exec(regexText.value)) !== null) {
+            matches.push(match[0]);
+        }
+        regexMatchResult.value = matches.length > 0 
+            ? 'RegExp matches found: ' + JSON.stringify(matches) 
+            : 'No matches found.';
+        papyr.toast('Regex tested successfully!', 'success');
+    } catch(e) {
+        regexMatchResult.value = 'Regex Error: ' + e.message;
+        papyr.toast('RegExp compilation error!', 'error');
+    }
+};
+
+const runOperatorEvaluator = () => {
+    try {
+        let res = new Function('return (' + operatorExpr.value + ')')();
+        operatorResult.value = 'Result of expression evaluation:\\n' + String(res);
+        papyr.toast('Expression evaluated!', 'success');
+    } catch(e) {
+        operatorResult.value = 'Evaluation Error: ' + e.message;
+        papyr.toast('Expression error!', 'error');
+    }
+};
+
+const runAsyncAwaitDemo = async () => {
+    if (asyncProgress.value !== 'idle' && asyncProgress.value !== 'complete') return;
+    asyncLogs.value = [];
+    const pushLog = (msg, queueType) => {
+        let logs = [...asyncLogs.value];
+        logs.push({ msg, queueType });
+        asyncLogs.value = logs;
+    };
+    asyncProgress.value = 'stack1';
+    pushLog('[Call Stack] Calling async function runAsyncAwaitDemo()...', 'stack');
+    
+    // Simulate Promise await microtask yields
+    await new Promise(resolve => {
+        setTimeout(() => {
+            asyncProgress.value = 'webapi';
+            pushLog('[Web API] Awaiting fetch request (simulated off-thread network delay)', 'webapi');
+            resolve();
+        }, 500);
+    });
+    
+    await new Promise(resolve => {
+        setTimeout(() => {
+            asyncProgress.value = 'microtask';
+            pushLog('[Microtask Queue] Processing resolved promise.then() microtask callback!', 'microtask');
+            resolve();
+        }, 500);
+    });
+    
+    await new Promise(resolve => {
+        setTimeout(() => {
+            asyncProgress.value = 'complete';
+            const mockUser = { id: 101, username: 'mdn_pioneer', status: 'active' };
+            pushLog('[Call Stack] Async execution complete. Received user: ' + JSON.stringify(mockUser), 'stack');
+            resolve();
+        }, 500);
+    });
+    papyr.toast('Async/Await simulator run complete!', 'success');
+};
+
+const runIntrospection = () => {
+    try {
+        let obj = new Function('return (' + introspectInput.value + ')')();
+        let props = Object.getOwnPropertyNames(obj);
+        let list = props.map(p => {
+            let val = obj[p];
+            let t = typeof val;
+            return p + ' (' + t + '): ' + (t === 'object' ? JSON.stringify(val) : String(val));
+        });
+        introspectResult.value = JSON.stringify(list, null, 2);
+        papyr.toast('Introspected successfully!', 'success');
+    } catch (e) {
+        introspectResult.value = 'Error: ' + e.message;
+        papyr.toast('Introspection error!', 'error');
+    }
+};
+
+const runSerialization = () => {
+    try {
+        let fn = new Function('return (' + serializeInput.value + ')')();
+        let details = [
+            'Type: ' + typeof fn,
+            'Name: ' + (fn.name || 'anonymous'),
+            'Arity (parameters): ' + fn.length,
+            'Source Code String (.toString()):',
+            fn.toString()
+        ];
+        serializedOutput.value = details.join('\\n');
+        papyr.toast('De-serialized successfully!', 'success');
+    } catch (e) {
+        serializedOutput.value = 'Error: ' + e.message;
+        papyr.toast('De-serialization error!', 'error');
+    }
+};
+
+const getEqualityResults = () => {
+    try {
+        let v1 = new Function('return (' + samenessVal1.value + ')')();
+        let v2 = new Function('return (' + samenessVal2.value + ')')();
+        return {
+            loose: String(v1 == v2),
+            strict: String(v1 === v2),
+            sameValue: String(Object.is(v1, v2))
+        };
+    } catch(e) {
+        return { loose: 'Error', strict: 'Error', sameValue: 'Error' };
+    }
+};
+
+const addToSet = () => {
+    let val = setInputValue.value.trim();
+    if (!val) return;
+    let list = [...setElements.value];
+    if (list.includes(val)) {
+        papyr.toast('Value already exists in Set!', 'warning');
+    } else {
+        list.push(val);
+        setElements.value = list;
+        setInputValue.value = '';
+        papyr.toast('Added to Set!', 'success');
+    }
+};
+
+const deleteFromSet = (item) => {
+    setElements.value = setElements.value.filter(x => x !== item);
+    papyr.toast('Removed from Set!', 'info');
+};
+
+const addToMap = () => {
+    let k = mapInputKey.value.trim();
+    let v = mapInputValue.value.trim();
+    if (!k || !v) return;
+    let list = [...mapEntries.value];
+    let index = list.findIndex(entry => entry[0] === k);
+    if (index > -1) {
+        list[index] = [k, v];
+        papyr.toast('Updated Map Key!', 'info');
+    } else {
+        list.push([k, v]);
+        papyr.toast('Set Map Entry!', 'success');
+    }
+    mapEntries.value = list;
+    mapInputKey.value = '';
+    mapInputValue.value = '';
+};
+
+const deleteFromMap = (key) => {
+    mapEntries.value = mapEntries.value.filter(entry => entry[0] !== key);
+    papyr.toast('Removed from Map!', 'info');
+};
+
+const spawnClosureCounter = () => {
+    closureCountSeq++;
+    let myId = closureCountSeq;
+    let privateVal = 0;
+    let incrementFunc = () => {
+        privateVal++;
+        let list = [...closureCounters.value];
+        let found = list.find(c => c.id === myId);
+        if (found) {
+            found.count = privateVal;
+            closureCounters.value = list;
+        }
+    };
+    let list = [...closureCounters.value];
+    list.push({ id: myId, count: 0, inc: incrementFunc });
+    closureCounters.value = list;
+    papyr.toast('Lexical Closure counter #' + myId + ' spawned!', 'success');
+};
+
+const runAsyncSimulator = () => {
+    if (asyncProgress.value !== 'idle' && asyncProgress.value !== 'complete') return;
+    asyncLogs.value = [];
+    const pushLog = (msg, queueType) => {
+        let logs = [...asyncLogs.value];
+        logs.push({ msg, queueType });
+        asyncLogs.value = logs;
+    };
+    asyncProgress.value = 'stack1';
+    pushLog('[Call Stack] Executing main thread script...', 'stack');
+    setTimeout(() => {
+        asyncProgress.value = 'webapi';
+        pushLog('[Web API] setTimeout() callback registered in Web APIs', 'webapi');
+        setTimeout(() => {
+            asyncProgress.value = 'queue';
+            pushLog('[Queue] Promise microtask (.then) registered in Microtask queue', 'queue');
+            setTimeout(() => {
+                asyncProgress.value = 'stack2';
+                pushLog('[Call Stack] Main thread execution completed. Stack empty.', 'stack');
+                setTimeout(() => {
+                    asyncProgress.value = 'microtask';
+                    pushLog('[Microtask Queue] Processing Promise.then() callback! (First Priority)', 'microtask');
+                    setTimeout(() => {
+                        asyncProgress.value = 'macrotask';
+                        pushLog('[Macrotask Queue] Processing setTimeout() callback! (Second Priority)', 'macrotask');
+                        setTimeout(() => {
+                            asyncProgress.value = 'complete';
+                            pushLog('[Event Loop] Cycle complete. Stack idle.', 'stack');
+                        }, 400);
+                    }, 400);
+                }, 400);
+            }, 400);
+        }, 400);
+    }, 400);
+};
+
+const tracePrototypes = () => {
+    try {
+        let obj = new Function('return (' + protoInputExpr.value + ')')();
+        let chain = [];
+        let temp = obj;
+        if (temp === undefined || temp === null) {
+            chain.push(String(temp));
+        } else {
+            while (temp !== null) {
+                let name = temp.constructor ? temp.constructor.name : 'Object (no constructor)';
+                chain.push(name);
+                temp = Object.getPrototypeOf(temp);
+            }
+            chain.push('null');
+        }
+        protoChainList.value = chain;
+        papyr.toast('Prototype chain traced!', 'success');
+    } catch (e) {
+        protoChainList.value = ['Error: ' + e.message];
+        papyr.toast('Tracer expression error!', 'error');
+    }
+};
+
+const toggleGcNode = (id) => {
+    let nodes = [...gcNodes.value];
+    let found = nodes.find(n => n.id === id);
+    if (found && found.type !== 'root') {
+        found.reachable = !found.reachable;
+        gcNodes.value = nodes;
+        papyr.toast('Toggled reference to ' + found.name, 'info');
+    }
+};
+
+const runSweepGc = () => {
+    if (gcSweepActive.value) return;
+    gcSweepActive.value = true;
+    papyr.toast('Mark Phase: Marking all reachable nodes from Global Root...', 'info');
+    setTimeout(() => {
+        papyr.toast('Sweep Phase: Reclaiming memory of unreachable nodes!', 'warning');
+        setTimeout(() => {
+            let nodes = [...gcNodes.value];
+            gcNodes.value = nodes.map(n => {
+                if (!n.reachable) {
+                    return { ...n, swept: true };
+                }
+                return n;
+            });
+            gcSweepActive.value = false;
+            papyr.toast('Garbage collection run complete!', 'success');
+        }, 1000);
+    }, 1000);
+};
+
+const resetGcNodes = () => {
+    gcSweepActive.value = false;
+    gcNodes.value = [
+      { id: '1', name: 'Global Scope', type: 'root', reachable: true },
+      { id: '2', name: 'Active Component State', type: 'child', reachable: true },
+      { id: '3', name: 'Lexical Closure Cache', type: 'child', reachable: true },
+      { id: '4', name: 'Detached DOM Reference', type: 'detached', reachable: false },
+      { id: '5', name: 'Unused Event Callback', type: 'detached', reachable: false }
+    ];
+    papyr.toast('Garbage collector simulation reset!', 'info');
+};
+
+
 let app = papyr.flex.col({ style: { width: '100%', gap: '16px' } },
     papyr.h3("📑 Creative Computing Cheat Sheet Showcase", { style: { color: 'white', margin: '0' } }),
     papyr.p("An interactive, high-fidelity playground displaying full native support for all HTML5 elements, JavaScript features, and CSS visual rules.", { style: { fontSize: '0.85rem', color: '#94a3b8', margin: '0 0 10px 0' } }),
@@ -632,119 +1022,631 @@ let app = papyr.flex.col({ style: { width: '100%', gap: '16px' } },
                         ),
                         papyr.div({ style: { flex: '1', minWidth: '200px', display: 'flex', alignItems: 'center' } },
                             papyr.img({ src: 'https://images.unsplash.com/photo-1543002588-bfa74002ed7e?w=200', alt: 'Book Cover', width: '80', height: '110', border: '1', align: 'left', style: { borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)', marginRight: '10px' } }),
-                            papyr.p("Image attribute mapping renders height, width, border, and alternate text dynamically.", { style: { fontSize: '0.75rem', color: '#94a3b8', margin: '0' } })
+                            papyr.p("Image attribute mapping renders height, width, border, and alternate text dynamically.", { style: { fontSize: '0.8rem', color: '#cbd5e1' } })
                         )
                     )
                 )
             );
         } else if (tab === 'js') {
             return papyr.flex.col({ style: { gap: '16px' } },
-                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
-                    papyr.h4("Math & Numbers Solver", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
-                    papyr.flex.row({ style: { gap: '10px', alignItems: 'center', marginBottom: '12px' } },
-                        papyr.span("Input Number:", { style: { fontSize: '0.8rem', color: '#94a3b8' } }),
-                        papyr.input("number", "4.6", {
-                            style: { width: '80px' },
-                            oninput: (e) => mathNum.value = parseFloat(e.target.value) || 0
-                        })
-                    ),
-                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', fontSize: '0.78rem' } },
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("Math.PI: "),
-                            papyr.span(() => Math.PI.toFixed(4), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                // Section 1: Beginner's Fundamentals & Dynamic Capabilities
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("⚙️ 1. Beginner's Dynamics & Introspection", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Explore JavaScript's dynamic nature: runtime code evaluation, object property descriptors crawler, function source serialization, and unique primitive types.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' } },
+                        // Live Eval
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Live eval() Code Sandbox", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.textarea({
+                                value: jsEvalCode.value,
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#a7f3d0', fontFamily: 'monospace', fontSize: '0.78rem', padding: '8px', borderRadius: '6px', minHeight: '80px', resize: 'vertical' },
+                                oninput: (e) => jsEvalCode.value = e.target.value
+                            }),
+                            papyr.button("Execute Dynamic Script", {
+                                style: { background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', width: 'fit-content' },
+                                onclick: () => {
+                                    try {
+                                        let res = new Function('return (' + jsEvalCode.value + ')')();
+                                        jsEvalResult.value = typeof res === 'object' ? JSON.stringify(res) : String(res);
+                                        papyr.toast('Script evaluated!', 'success');
+                                    } catch(err) {
+                                        jsEvalResult.value = 'Error: ' + err.message;
+                                        papyr.toast('Eval error!', 'error');
+                                    }
+                                }
+                            }),
+                            papyr.div({ style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid rgba(255,255,255,0.05)', minHeight: '34px' } },
+                                papyr.span("Result: ", { style: { color: '#64748b' } }),
+                                papyr.span(() => jsEvalResult.value || 'None', { style: { color: '#e2e8f0', fontFamily: 'monospace' } })
+                            )
                         ),
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("Math.round: "),
-                            papyr.span(() => Math.round(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        
+                        // Object Introspector
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Object Property Introspector", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.input("text", introspectInput.value, {
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fda4af', fontFamily: 'monospace', fontSize: '0.78rem', padding: '8px', borderRadius: '6px' },
+                                oninput: (e) => introspectInput.value = e.target.value
+                            }),
+                            papyr.button("Analyze Object Keys", {
+                                style: { background: '#14b8a6', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', width: 'fit-content' },
+                                onclick: runIntrospection
+                            }),
+                            papyr.pre(() => introspectResult.value, {
+                                style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.7rem', color: '#e2e8f0', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '100px' }
+                            })
                         ),
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("Math.sqrt: "),
-                            papyr.span(() => Math.sqrt(Math.abs(mathNum.value)).toFixed(2), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                        
+                        // Function Source Recovery
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Function Serialization (.toString())", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.textarea({
+                                value: serializeInput.value,
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#a5b4fc', fontFamily: 'monospace', fontSize: '0.78rem', padding: '8px', borderRadius: '6px', minHeight: '60px', resize: 'vertical' },
+                                oninput: (e) => serializeInput.value = e.target.value
+                            }),
+                            papyr.button("De-serialize Function", {
+                                style: { background: '#a855f7', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold', width: 'fit-content' },
+                                onclick: runSerialization
+                            }),
+                            papyr.pre(() => serializedOutput.value || "Click 'De-serialize Function' to view source metadata analysis.", {
+                                style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '100px', whiteSpace: 'pre-wrap' }
+                            })
                         ),
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("Math.floor: "),
-                            papyr.span(() => Math.floor(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
-                        ),
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("Math.ceil: "),
-                            papyr.span(() => Math.ceil(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
-                        ),
-                        papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '8px', borderRadius: '4px' } },
-                            papyr.span("toFixed(0): "),
-                            papyr.span(() => mathNum.value.toFixed(0), { style: { color: '#818cf8', fontWeight: 'bold' } })
+
+                        // Primitives Explorer
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Primitives & Symbol & BigInt Explorer", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap' } },
+                                papyr.button("Symbol", {
+                                    style: () => ({ background: primitiveValType.value === 'symbol' ? '#6366f1' : 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }),
+                                    onclick: () => runPrimitiveExplorer('symbol')
+                                }),
+                                papyr.button("BigInt", {
+                                    style: () => ({ background: primitiveValType.value === 'bigint' ? '#6366f1' : 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }),
+                                    onclick: () => runPrimitiveExplorer('bigint')
+                                }),
+                                papyr.button("Null/Undef", {
+                                    style: () => ({ background: primitiveValType.value === 'null_undef' ? '#6366f1' : 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }),
+                                    onclick: () => runPrimitiveExplorer('null_undef')
+                                }),
+                                papyr.button("Taxonomy", {
+                                    style: () => ({ background: primitiveValType.value === 'primitives_list' ? '#6366f1' : 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' }),
+                                    onclick: () => runPrimitiveExplorer('primitives_list')
+                                })
+                            ),
+                            papyr.pre(() => primitiveOutput.value, {
+                                style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.7rem', color: '#34d399', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '100px', whiteSpace: 'pre-wrap' }
+                            })
                         )
                     )
                 ),
                 
-                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
-                    papyr.h4("Arrays Interactive Sandbox", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
-                    papyr.p(() => "Current Array: [ " + arrayState.value.join(', ') + " ]", { style: { fontSize: '0.9rem', color: '#a7f3d0', fontWeight: 'bold', margin: '0 0 10px 0' } }),
-                    papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap' } },
-                        papyr.button("Push 'React'", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                let arr = [...arrayState.value];
-                                arr.push('React');
-                                arrayState.value = arr;
-                                papyr.toast("Pushed 'React'!", "info");
-                            }
-                        }),
-                        papyr.button("Pop Last", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
-                                let arr = [...arrayState.value];
-                                arr.pop();
-                                arrayState.value = arr;
-                                papyr.toast("Popped element!", "info");
-                            }
-                        }),
-                        papyr.button("Shift First", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
-                                let arr = [...arrayState.value];
-                                arr.shift();
-                                arrayState.value = arr;
-                                papyr.toast("Shifted element!", "info");
-                            }
-                        }),
-                        papyr.button("Unshift 'Node.js'", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                let arr = [...arrayState.value];
-                                arr.unshift('Node.js');
-                                arrayState.value = arr;
-                                papyr.toast("Unshifted 'Node.js'!", "info");
-                            }
-                        }),
-                        papyr.button("Reverse Array", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                let arr = [...arrayState.value];
-                                arr.reverse();
-                                arrayState.value = arr;
-                                papyr.toast("Reversed Array!", "info");
-                            }
-                        }),
-                        papyr.button("Sort Alphabetically", {
-                            style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
-                            onclick: () => {
-                                let arr = [...arrayState.value];
-                                arr.sort();
-                                arrayState.value = arr;
-                                papyr.toast("Sorted Array!", "info");
-                            }
-                        })
+                // Section 2: Structural Data, sameness, sets/maps
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("📊 2. Equality Comparisons & Standard Data Structures", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Validate equality behaviors (loose ==, strict ===, and Same-Value Object.is()) side-by-side, and explore core structural collections.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' } },
+                        // Equality Matrix
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '10px' } },
+                            papyr.span("Equality Sameness Checker", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '8px', alignItems: 'center' } },
+                                papyr.input("text", samenessVal1.value, {
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', width: '90px', textAlign: 'center', fontFamily: 'monospace' },
+                                    oninput: (e) => samenessVal1.value = e.target.value
+                                }),
+                                papyr.span("vs", { style: { color: '#64748b', fontSize: '0.8rem' } }),
+                                papyr.input("text", samenessVal2.value, {
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', width: '90px', textAlign: 'center', fontFamily: 'monospace' },
+                                    oninput: (e) => samenessVal2.value = e.target.value
+                                })
+                            ),
+                            papyr.flex.col({ style: { gap: '6px', fontSize: '0.78rem' } },
+                                papyr.flex.row({ justify: 'space-between', style: { background: 'rgba(0,0,0,0.15)', padding: '6px 10px', borderRadius: '4px' } },
+                                    papyr.span("Loose Equality ( == ):"),
+                                    papyr.span(() => getEqualityResults().loose, {
+                                        style: () => ({ color: getEqualityResults().loose === 'true' ? '#10b981' : '#f43f5e', fontWeight: 'bold' })
+                                    })
+                                ),
+                                papyr.flex.row({ justify: 'space-between', style: { background: 'rgba(0,0,0,0.15)', padding: '6px 10px', borderRadius: '4px' } },
+                                    papyr.span("Strict Equality ( === ):"),
+                                    papyr.span(() => getEqualityResults().strict, {
+                                        style: () => ({ color: getEqualityResults().strict === 'true' ? '#10b981' : '#f43f5e', fontWeight: 'bold' })
+                                    })
+                                ),
+                                papyr.flex.row({ justify: 'space-between', style: { background: 'rgba(0,0,0,0.15)', padding: '6px 10px', borderRadius: '4px' } },
+                                    papyr.span("Same-Value ( Object.is ):"),
+                                    papyr.span(() => getEqualityResults().sameValue, {
+                                        style: () => ({ color: getEqualityResults().sameValue === 'true' ? '#10b981' : '#f43f5e', fontWeight: 'bold' })
+                                    })
+                                )
+                            ),
+                            papyr.flex.row({ style: { gap: '4px', flexWrap: 'wrap' } },
+                                papyr.button("NaN Case", {
+                                    style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontSize: '0.65rem' },
+                                    onclick: () => setEqualityPreset('nan')
+                                }),
+                                papyr.button("0 vs false", {
+                                    style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontSize: '0.65rem' },
+                                    onclick: () => setEqualityPreset('coercion')
+                                }),
+                                papyr.button("+0 vs -0", {
+                                    style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontSize: '0.65rem' },
+                                    onclick: () => setEqualityPreset('zero')
+                                }),
+                                papyr.button("[] vs ![]", {
+                                    style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '3px 6px', borderRadius: '3px', cursor: 'pointer', fontSize: '0.65rem' },
+                                    onclick: () => setEqualityPreset('array')
+                                })
+                            )
+                        ),
+                        
+                        // Set Explorer
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Set Explorer (Unique Values)", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '6px' } },
+                                papyr.input("text", setInputValue.value, {
+                                    placeholder: "New item...",
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', flex: 1 },
+                                    oninput: (e) => setInputValue.value = e.target.value
+                                }),
+                                papyr.button("Add", {
+                                    style: { background: '#10b981', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' },
+                                    onclick: addToSet
+                                })
+                            ),
+                            papyr.span("Set Elements (Click to delete):", { style: { fontSize: '0.72rem', color: '#64748b', marginTop: '4px' } }),
+                            papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap', minHeight: '34px', background: '#090d16', padding: '6px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' } },
+                                () => setElements.value.map(item => 
+                                    papyr.span(item, {
+                                        style: { background: 'rgba(16, 185, 129, 0.15)', color: '#a7f3d0', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 8px', borderRadius: '4px', fontSize: '0.72rem', cursor: 'pointer' },
+                                        onclick: () => deleteFromSet(item)
+                                    })
+                                )
+                            )
+                        ),
+                        
+                        // Map Explorer
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Map Explorer (Key-Value Pairs)", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '6px' } },
+                                papyr.input("text", mapInputKey.value, {
+                                    placeholder: "Key",
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', flex: 1 },
+                                    oninput: (e) => mapInputKey.value = e.target.value
+                                }),
+                                papyr.input("text", mapInputValue.value, {
+                                    placeholder: "Value",
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', flex: 1 },
+                                    oninput: (e) => mapInputValue.value = e.target.value
+                                }),
+                                papyr.button("Set", {
+                                    style: { background: '#38bdf8', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' },
+                                    onclick: addToMap
+                                })
+                            ),
+                            papyr.span("Map Entries (Click to delete):", { style: { fontSize: '0.72rem', color: '#64748b', marginTop: '4px' } }),
+                            papyr.flex.col({ style: { gap: '4px', minHeight: '34px', background: '#090d16', padding: '6px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.72rem' } },
+                                () => mapEntries.value.map(entry => 
+                                    papyr.flex.row({ justify: 'space-between', style: { background: 'rgba(56, 189, 248, 0.1)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(56, 189, 248, 0.2)', cursor: 'pointer' }, onclick: () => deleteFromMap(entry[0]) },
+                                        papyr.span(entry[0], { style: { color: '#38bdf8', fontWeight: 'bold', fontFamily: 'monospace' } }),
+                                        papyr.span(entry[1], { style: { color: '#e2e8f0', fontFamily: 'monospace' } })
+                                    )
+                                )
+                            )
+                        )
+                    ),
+                    papyr.div({ style: { background: 'rgba(234,179,8,0.06)', border: '1px dashed rgba(234,179,8,0.2)', borderRadius: '8px', padding: '12px', marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '4px' } },
+                        papyr.span("💡 Memory Tip: WeakMap & WeakSet", { style: { fontSize: '0.8rem', color: '#eab308', fontWeight: 'bold' } }),
+                        papyr.p("Unlike Map and Set, WeakMap and WeakSet hold *weak* references to object keys/values. If there are no other references to an object in the WeakMap key or WeakSet, the JS engine's Garbage Collector (GC) can automatically reclaim the memory, preventing memory leaks in complex runtime graphs.", { style: { fontSize: '0.75rem', color: '#cbd5e1', margin: '0' } })
                     )
                 ),
                 
-                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' } },
-                    papyr.h4("Strings, Dates & Errors Handler", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
+                // Section 3: Lexical Closures & Scopes Spawner
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("🔐 3. Scopes & Lexical Closures Spawner", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Closures lock in references to their surrounding scope. Click below to dynamically spawn isolated lexical closure instances and increment their private variables.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.button("Spawn Isolated Closure Counter", {
+                        style: { background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '14px', boxShadow: '0 4px 12px rgba(16,185,129,0.3)', transition: 'transform 0.1s' },
+                        onclick: spawnClosureCounter
+                    }),
+                    
+                    papyr.flex.row({ style: { gap: '12px', flexWrap: 'wrap', minHeight: '60px' } },
+                        () => closureCounters.value.length === 0 ? 
+                            papyr.span("No active closure instances spawned yet. Click above to create one!", { style: { fontSize: '0.8rem', color: '#64748b', fontStyle: 'italic' } }) :
+                            closureCounters.value.map(item => 
+                                papyr.div({ style: { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px 14px', minWidth: '150px', display: 'flex', flexDirection: 'column', gap: '8px' } },
+                                    papyr.span("Closure Counter #" + item.id, { style: { fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 'bold' } }),
+                                    papyr.flex.row({ style: { alignItems: 'baseline', gap: '6px' } },
+                                        papyr.span("Private Value: ", { style: { fontSize: '0.72rem', color: '#94a3b8' } }),
+                                        papyr.span(item.count, { style: { fontSize: '1.1rem', color: '#10b981', fontWeight: '800', fontFamily: 'monospace' } })
+                                    ),
+                                    papyr.button("Increment", {
+                                        style: { background: 'rgba(255,255,255,0.06)', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem' },
+                                        onclick: item.inc
+                                    })
+                                )
+                            )
+                    )
+                ),
+                
+                // Section 4: Asynchronous JS & Event Loop simulator
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("⏳ 4. Asynchronous JS & Event Loop Simulator", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Watch the event loop orchestrate tasks chronologically, and run the live async/await simulated fetch adapter.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' } },
+                        // Column 1: Traditional Event Loop
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '12px' } },
+                            papyr.span("Event Loop Queue Orchestrator", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '12px', alignItems: 'center' } },
+                                papyr.button("Run Loop Cycle", {
+                                    style: () => ({
+                                        background: asyncProgress.value === 'idle' || asyncProgress.value === 'complete' ? 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)' : 'rgba(255,255,255,0.05)',
+                                        color: asyncProgress.value === 'idle' || asyncProgress.value === 'complete' ? 'white' : '#64748b',
+                                        border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
+                                    }),
+                                    onclick: runAsyncSimulator
+                                }),
+                                papyr.span(() => "Status: " + asyncProgress.value.toUpperCase(), {
+                                    style: () => ({
+                                        fontSize: '0.75rem',
+                                        color: asyncProgress.value === 'idle' ? '#64748b' : (asyncProgress.value === 'complete' ? '#10b981' : '#f43f5e'),
+                                        fontWeight: 'bold', fontFamily: 'monospace'
+                                    })
+                                })
+                            ),
+                            papyr.flex.col({ style: { gap: '6px' } },
+                                papyr.div({
+                                    style: () => ({
+                                        background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', border: '1px solid',
+                                        borderColor: asyncProgress.value === 'stack1' || asyncProgress.value === 'stack2' ? '#6366f1' : 'rgba(255,255,255,0.03)',
+                                        transition: 'all 0.2s'
+                                    })
+                                },
+                                    papyr.span("1. Call Stack (Synchronous)", { style: { fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', display: 'block' } })
+                                ),
+                                papyr.div({
+                                    style: () => ({
+                                        background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', border: '1px solid',
+                                        borderColor: asyncProgress.value === 'webapi' ? '#eab308' : 'rgba(255,255,255,0.03)',
+                                        transition: 'all 0.2s'
+                                    })
+                                },
+                                    papyr.span("2. Web APIs (Timer Threads)", { style: { fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', display: 'block' } })
+                                ),
+                                papyr.div({
+                                    style: () => ({
+                                        background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', border: '1px solid',
+                                        borderColor: asyncProgress.value === 'microtask' || asyncProgress.value === 'queue' ? '#10b981' : 'rgba(255,255,255,0.03)',
+                                        transition: 'all 0.2s'
+                                    })
+                                },
+                                    papyr.span("3. Microtasks (Promise.then)", { style: { fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', display: 'block' } })
+                                ),
+                                papyr.div({
+                                    style: () => ({
+                                        background: 'rgba(0,0,0,0.25)', padding: '8px', borderRadius: '6px', border: '1px solid',
+                                        borderColor: asyncProgress.value === 'macrotask' ? '#f43f5e' : 'rgba(255,255,255,0.03)',
+                                        transition: 'all 0.2s'
+                                    })
+                                },
+                                    papyr.span("4. Macrotasks (setTimeout)", { style: { fontSize: '0.72rem', color: '#cbd5e1', fontWeight: 'bold', display: 'block' } })
+                                )
+                            )
+                        ),
+                        
+                        // Column 2: New Live Async/Await fetch simulator
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '12px' } },
+                            papyr.span("Live Async / Await Fetch Simulator", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '12px', alignItems: 'center' } },
+                                papyr.button("Execute Async/Await", {
+                                    style: () => ({
+                                        background: asyncProgress.value === 'idle' || asyncProgress.value === 'complete' ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255,255,255,0.05)',
+                                        color: asyncProgress.value === 'idle' || asyncProgress.value === 'complete' ? 'white' : '#64748b',
+                                        border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 'bold'
+                                    }),
+                                    onclick: runAsyncAwaitDemo
+                                }),
+                                papyr.span("Status: Promise-awaited", { style: { fontSize: '0.72rem', color: '#64748b', fontStyle: 'italic' } })
+                            ),
+                            papyr.div({ style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.7rem', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '4px' } },
+                                papyr.span("Awaited Execution Blueprint:", { style: { fontWeight: 'bold', color: '#eab308' } }),
+                                papyr.span("async function fetchUser() {", { style: { fontFamily: 'monospace' } }),
+                                papyr.span("  const response = await fetch('/api/user');", { style: { fontFamily: 'monospace', color: '#cbd5e1' } }),
+                                papyr.span("  const data = await response.json();", { style: { fontFamily: 'monospace', color: '#cbd5e1' } }),
+                                papyr.span("  return data;", { style: { fontFamily: 'monospace' } }),
+                                papyr.span("}", { style: { fontFamily: 'monospace' } })
+                            )
+                        )
+                    ),
+                    
+                    papyr.flex.col({ style: { background: '#090d16', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', gap: '6px', fontSize: '0.75rem', minHeight: '100px', marginTop: '14px' } },
+                        papyr.span("Chronological Simulator Thread Log:", { style: { color: '#64748b', fontWeight: 'bold' } }),
+                        () => asyncLogs.value.length === 0 ? 
+                            papyr.span("Ready to execute asynchronous cycle. Click one of the runs above.", { style: { color: '#64748b', fontStyle: 'italic' } }) :
+                            asyncLogs.value.map(log => 
+                                papyr.flex.row({ style: { gap: '8px', color: log.queueType === 'stack' ? '#818cf8' : (log.queueType === 'webapi' ? '#fbbf24' : (log.queueType === 'microtask' ? '#34d399' : '#f87171')), fontFamily: 'monospace' } },
+                                    papyr.span("•", { style: { fontWeight: 'bold' } }),
+                                    papyr.span(log.msg)
+                                )
+                            )
+                    )
+                ),
+                
+                // Section 5: Advanced Architecture: Prototypes, Classes & GC
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("🧬 5. Advanced Architecture: Prototypes, ES6 Classes & Garbage Collector", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Deep-dive into prototype chains, ES6 OOP classes with getters/setters/statics, and mark-and-sweep GC sweep reachability cycles.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' } },
+                        // Prototype chain crawler
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Prototype chain crawler (__proto__)", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '6px' } },
+                                papyr.input("text", protoInputExpr.value, {
+                                    placeholder: "e.g., new Date(), []",
+                                    style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px', flex: 1, fontFamily: 'monospace' },
+                                    oninput: (e) => protoInputExpr.value = e.target.value
+                                }),
+                                papyr.button("Crawl Chain", {
+                                    style: { background: '#6366f1', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' },
+                                    onclick: tracePrototypes
+                                })
+                            ),
+                            papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap', alignItems: 'center', background: '#090d16', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', minHeight: '38px', fontSize: '0.75rem', fontFamily: 'monospace' } },
+                                () => protoChainList.value.length === 0 ?
+                                    papyr.span("Enter object expression above and crawl.", { style: { color: '#64748b', fontStyle: 'italic' } }) :
+                                    protoChainList.value.map((proto, idx) => 
+                                        papyr.flex.row({ style: { alignItems: 'center', gap: '6px' } },
+                                            papyr.span(proto, { style: { color: proto === 'null' ? '#f43f5e' : '#fda4af', fontWeight: 'bold' } }),
+                                            idx < protoChainList.value.length - 1 ? papyr.span("→", { style: { color: '#64748b' } }) : ''
+                                        )
+                                    )
+                                )
+                            )
+                        ),
+                        
+                        // ES6 Class Builder
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("ES6 OOP Classes & Accessors Builder", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.button("Build & Instantiate Book Class", {
+                                style: { background: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', width: 'fit-content' },
+                                onclick: runClassDemo
+                            }),
+                            papyr.pre(() => classOutput.value || "Click 'Build & Instantiate' to construct standard ES6 class with getters, setters and static methods dynamically.", {
+                                style: { background: '#090d16', padding: '8px', borderRadius: '6px', fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '120px', whiteSpace: 'pre-wrap' }
+                            })
+                        ),
+                        
+                        // Mark & Sweep GC simulator
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Interactive Mark-and-Sweep Memory Simulator", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '6px', marginBottom: '4px' } },
+                                papyr.button("Run Sweep Phase 🧹", {
+                                    style: { background: '#f43f5e', border: 'none', color: 'white', padding: '6px 10px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer' },
+                                    onclick: runSweepGc
+                                }),
+                                papyr.button("Reset Heap Nodes", {
+                                    style: { background: 'rgba(255,255,255,0.06)', border: 'none', color: 'white', padding: '6px 10px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer' },
+                                    onclick: resetGcNodes
+                                })
+                            ),
+                            papyr.flex.col({ style: { gap: '6px', background: '#090d16', padding: '8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)', minHeight: '120px' } },
+                                () => gcNodes.value.map(node => 
+                                    papyr.flex.row({
+                                        justify: 'space-between',
+                                        style: () => ({
+                                            background: node.swept ? 'rgba(0,0,0,0.4)' : (node.reachable ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)'),
+                                            border: '1px solid',
+                                            borderColor: node.swept ? 'rgba(255,255,255,0.02)' : (node.reachable ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'),
+                                            padding: '4px 8px', borderRadius: '4px', fontSize: '0.72rem', alignItems: 'center',
+                                            opacity: node.swept ? '0.35' : '1.0',
+                                            textDecoration: node.swept ? 'line-through' : 'none',
+                                            transition: 'all 0.5s'
+                                        })
+                                    },
+                                        papyr.flex.row({ style: { gap: '6px', alignItems: 'center' } },
+                                            papyr.span("●", { style: () => ({ color: node.swept ? '#64748b' : (node.reachable ? '#10b981' : '#f43f5e') }) }),
+                                            papyr.span(node.name, { style: { color: '#fff', fontWeight: 'bold' } })
+                                        ),
+                                        node.type === 'root' ? 
+                                            papyr.span("[Global GC Root]", { style: { color: '#64748b', fontSize: '0.65rem' } }) :
+                                            (node.swept ? 
+                                                papyr.span("[RECLAIMED]", { style: { color: '#64748b', fontSize: '0.65rem' } }) :
+                                                papyr.button(node.reachable ? "Disconnect" : "Connect Root", {
+                                                    style: { background: 'rgba(255,255,255,0.06)', border: 'none', color: '#cbd5e1', padding: '2px 6px', borderRadius: '3px', fontSize: '0.65rem', cursor: 'pointer' },
+                                                    onclick: () => toggleGcNode(node.id)
+                                                })
+                                            )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ),
+                
+                // Section 6: Built-in Objects, RegExp and Operator Precedence
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("🔢 6. Built-in Objects, RegExp & Operators Evaluator", { style: { color: '#6366f1', margin: '0 0 8px 0', fontSize: '1.1rem', fontWeight: 'bold' } }),
+                    papyr.p("Use built-in Math/Number operations, match text patterns with live RegExp compiles, and evaluate expressions to observe operator precedence.", { style: { fontSize: '0.8rem', color: '#94a3b8', margin: '0 0 16px 0' } }),
+                    
+                    papyr.grid({ style: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' } },
+                        // Math and numbers
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Math & Numbers Engine", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.flex.row({ style: { gap: '10px', alignItems: 'center', marginBottom: '4px' } },
+                                papyr.span("Value:", { style: { fontSize: '0.78rem', color: '#94a3b8' } }),
+                                papyr.input("number", "4.6", {
+                                    style: { width: '80px', background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '4px 8px', borderRadius: '4px' },
+                                    oninput: (e) => mathNum.value = parseFloat(e.target.value) || 0
+                                })
+                            ),
+                            papyr.grid({ style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '0.75rem' } },
+                                papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '6px', borderRadius: '4px' } },
+                                    papyr.span("Math.PI: "),
+                                    papyr.span(() => Math.PI.toFixed(4), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                                ),
+                                papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '6px', borderRadius: '4px' } },
+                                    papyr.span("Math.round: "),
+                                    papyr.span(() => Math.round(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                                ),
+                                papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '6px', borderRadius: '4px' } },
+                                    papyr.span("Math.sqrt: "),
+                                    papyr.span(() => Math.sqrt(Math.abs(mathNum.value)).toFixed(2), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                                ),
+                                papyr.div({ style: { background: 'rgba(0,0,0,0.15)', padding: '6px', borderRadius: '4px' } },
+                                    papyr.span("Math.floor: "),
+                                    papyr.span(() => Math.floor(mathNum.value), { style: { color: '#818cf8', fontWeight: 'bold' } })
+                                )
+                            )
+                        ),
+                        
+                        // Live RegExp
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Live RegExp Pattern Tester", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.input("text", regexPattern.value, {
+                                placeholder: "RegExp pattern (e.g. \\d+)",
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#a7f3d0', fontFamily: 'monospace', fontSize: '0.78rem', padding: '6px', borderRadius: '4px' },
+                                oninput: (e) => regexPattern.value = e.target.value
+                            }),
+                            papyr.input("text", regexText.value, {
+                                placeholder: "Search text...",
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.78rem', padding: '6px', borderRadius: '4px' },
+                                oninput: (e) => regexText.value = e.target.value
+                            }),
+                            papyr.button("Execute RegExp Test", {
+                                style: { background: '#10b981', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', width: 'fit-content' },
+                                onclick: testRegex
+                            }),
+                            papyr.pre(() => regexMatchResult.value || "Matches output...", {
+                                style: { background: '#090d16', padding: '6px', borderRadius: '4px', fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '60px', whiteSpace: 'pre-wrap' }
+                            })
+                        ),
+                        
+                        // Operator Precedence
+                        papyr.flex.col({ style: { background: 'rgba(0,0,0,0.2)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.03)', gap: '8px' } },
+                            papyr.span("Expressions & Operators Evaluator", { style: { fontSize: '0.85rem', color: '#fff', fontWeight: 'bold' } }),
+                            papyr.input("text", operatorExpr.value, {
+                                placeholder: "Expression...",
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fda4af', fontFamily: 'monospace', fontSize: '0.78rem', padding: '6px', borderRadius: '4px' },
+                                oninput: (e) => operatorExpr.value = e.target.value
+                            }),
+                            papyr.button("Evaluate Operators", {
+                                style: { background: '#a855f7', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer', width: 'fit-content' },
+                                onclick: runOperatorEvaluator
+                            }),
+                            papyr.pre(() => operatorResult.value || "Precedence output...", {
+                                style: { background: '#090d16', padding: '6px', borderRadius: '4px', fontSize: '0.7rem', color: '#cbd5e1', fontFamily: 'monospace', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.05)', margin: '0', maxHeight: '60px', whiteSpace: 'pre-wrap' }
+                            })
+                        )
+                    )
+                ),
+                
+                // Section 7: Array Interactive Sandbox (enhanced visual)
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("📦 7. Arrays Mutability & High-Order Transformations", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
+                    papyr.p(() => "Current Array: [ " + arrayState.value.map(x => "'" + x + "'").join(', ') + " ]", { style: { fontSize: '0.9rem', color: '#a7f3d0', fontWeight: 'bold', margin: '0 0 10px 0', fontFamily: 'monospace' } }),
+                    
+                    papyr.flex.col({ style: { gap: '10px' } },
+                        papyr.span("Mutating Operations (Changes original reference):", { style: { fontSize: '0.78rem', color: '#94a3b8', fontWeight: 'bold' } }),
+                        papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap' } },
+                            papyr.button("Push 'React'", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let arr = [...arrayState.value];
+                                    arr.push('React');
+                                    arrayState.value = arr;
+                                    papyr.toast("Pushed 'React'!", "info");
+                                }
+                            }),
+                            papyr.button("Pop Last", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
+                                    let arr = [...arrayState.value];
+                                    arr.pop();
+                                    arrayState.value = arr;
+                                    papyr.toast("Popped element!", "info");
+                                }
+                            }),
+                            papyr.button("Shift First", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    if (arrayState.value.length === 0) return papyr.toast("Array is empty!", "error");
+                                    let arr = [...arrayState.value];
+                                    arr.shift();
+                                    arrayState.value = arr;
+                                    papyr.toast("Shifted element!", "info");
+                                }
+                            }),
+                            papyr.button("Unshift 'Node.js'", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let arr = [...arrayState.value];
+                                    arr.unshift('Node.js');
+                                    arrayState.value = arr;
+                                    papyr.toast("Unshifted 'Node.js'!", "info");
+                                }
+                            }),
+                            papyr.button("Reverse Array", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let arr = [...arrayState.value];
+                                    arr.reverse();
+                                    arrayState.value = arr;
+                                    papyr.toast("Reversed Array!", "info");
+                                }
+                            }),
+                            papyr.button("Sort Alphabetically", {
+                                style: { background: 'rgba(255,255,255,0.06)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let arr = [...arrayState.value];
+                                    arr.sort();
+                                    arrayState.value = arr;
+                                    papyr.toast("Sorted Array!", "info");
+                                }
+                            })
+                        ),
+                        
+                        papyr.span("High-Order Transformations (Functional, returns copy):", { style: { fontSize: '0.78rem', color: '#94a3b8', fontWeight: 'bold', marginTop: '6px' } }),
+                        papyr.flex.row({ style: { gap: '6px', flexWrap: 'wrap' } },
+                            papyr.button("Map: UpperCase", {
+                                style: { background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let mapped = arrayState.value.map(x => x.toUpperCase());
+                                    papyr.toast("Map Complete: " + JSON.stringify(mapped), "success");
+                                }
+                            }),
+                            papyr.button("Filter: Length > 3", {
+                                style: { background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let filtered = arrayState.value.filter(x => x.length > 3);
+                                    papyr.toast("Filter Complete: " + JSON.stringify(filtered), "success");
+                                }
+                            }),
+                            papyr.button("Reduce: Concat Lengths", {
+                                style: { background: 'rgba(56, 189, 248, 0.15)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },
+                                onclick: () => {
+                                    let sum = arrayState.value.reduce((acc, x) => acc + x.length, 0);
+                                    papyr.toast("Reduce (Sum of string lengths) Complete: " + sum, "success");
+                                }
+                            })
+                        )
+                    )
+                ),
+                
+                // Section 8: Strings, Dates & Errors Handler (enhanced visual)
+                papyr.div('.card', { style: { background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' } },
+                    papyr.h4("💬 8. Strings, Dates & Exception handling (try-catch)", { style: { color: '#6366f1', margin: '0 0 12px 0' } }),
                     papyr.flex.row({ style: { gap: '16px', flexWrap: 'wrap' } },
                         papyr.flex.col({ style: { flex: 1, minWidth: '220px', gap: '8px' } },
                             papyr.span("String Operations:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold' } }),
                             papyr.input("text", stringVal.value, {
+                                style: { background: '#090d16', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.8rem', padding: '6px', borderRadius: '4px' },
                                 oninput: (e) => stringVal.value = e.target.value
                             }),
                             papyr.flex.col({ style: { gap: '4px', fontSize: '0.78rem', color: '#cbd5e1' } },
@@ -767,7 +1669,7 @@ let app = papyr.flex.col({ style: { width: '100%', gap: '16px' } },
                         )
                     ),
                     
-                    papyr.span("Error Boundary Validator:", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', display: 'block', margin: '14px 0 6px 0' } }),
+                    papyr.span("Error Boundary Validator (Exception Handling):", { style: { fontSize: '0.8rem', color: '#64748b', fontWeight: 'bold', display: 'block', margin: '14px 0 6px 0' } }),
                     papyr.flex.row({ style: { gap: '10px' } },
                         papyr.button("Trigger Expected Error 💥", {
                             style: { background: 'rgba(244, 63, 94, 0.15)', color: '#fda4af', border: '1px solid rgba(244, 63, 94, 0.3)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' },

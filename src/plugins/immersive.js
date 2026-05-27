@@ -4,94 +4,6 @@
  * v2.0 - Intelligent Three.js bindings, parallax depth, and Canvas2D holographic fallbacks.
  */
 (function(window) {
-    if (!window.papyr) {
-        console.warn("Papyr core not found. Load papyr.js before loading papyr-plugins.");
-        return;
-    }
-
-    const papyr3d = {
-        /**
-         * Orchestrates an immersive 3D/holographic backdrop.
-         * Detects Three.js globally, otherwise boots a gorgeous, pointer-aware fallback particle environment.
-         */
-        scene(options = {}, ...children) {
-            const config = Object.assign({
-                environment: 'space', // 'space', 'cyberpunk', 'underwater'
-                particles: true,
-                depth: true,
-                overlay: null
-            }, options);
-
-            const container = papyr.div('.papyr-3d-container', {
-                style: {
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    minHeight: '400px',
-                    overflow: 'hidden',
-                    background: '#04060d',
-                    borderRadius: '16px'
-                }
-            });
-
-            // Create Canvas element
-            const canvas = document.createElement('canvas');
-            canvas.style.position = 'absolute';
-            canvas.style.top = '0';
-            canvas.style.left = '0';
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            canvas.style.zIndex = '0';
-            canvas.style.pointerEvents = 'none';
-            container.appendChild(canvas);
-
-            // Mount child overlay elements
-            if (config.overlay) {
-                const overlayWrapper = papyr.div('.papyr-3d-overlay', {
-                    style: {
-                        position: 'relative',
-                        zIndex: '2',
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        padding: '24px',
-                        pointerEvents: 'auto'
-                    }
-                }, config.overlay);
-                container.appendChild(overlayWrapper);
-            }
-
-            // Append any additional children inside the container
-            children.forEach(child => {
-                if (child) {
-                    if (child instanceof Element) {
-                        child.style.position = 'relative';
-                        child.style.zIndex = '2';
-                    }
-                    container.appendChild(child);
-                }
-            });
-
-            // Boot renderers after mount paint
-            setTimeout(() => {
-                const w = container.clientWidth || window.innerWidth;
-                const h = container.clientHeight || window.innerHeight;
-                canvas.width = w;
-                canvas.height = h;
-
-                if (window.THREE) {
-                    bootThreeJS(canvas, config);
-                } else {
-                    bootFallbackCanvas(canvas, config);
-                }
-            }, 50);
-
-            return container;
-        }
-    };
-
     // Helper: Smart Three.js WebGL Orchestrator
     function bootThreeJS(canvas, config) {
         try {
@@ -423,8 +335,113 @@
         });
     }
 
-    // Attach to namespace
-    window.papyr3d = papyr3d;
-    window.papyr['3d'] = papyr3d; // both references work cleanly
+    const immersivePlugin = {
+        name: 'papyr-immersive',
+        version: '2.0.0',
+        install(papyr) {
+            const papyr3d = {
+                /**
+                 * Orchestrates an immersive 3D/holographic backdrop.
+                 * Detects Three.js globally, otherwise boots a gorgeous, pointer-aware fallback particle environment.
+                 */
+                scene(options = {}, ...children) {
+                    const config = Object.assign({
+                        environment: 'space', // 'space', 'cyberpunk', 'underwater'
+                        particles: true,
+                        depth: true,
+                        overlay: null
+                    }, options);
 
+                    const container = papyr.div('.papyr-3d-container', {
+                        style: {
+                            position: 'relative',
+                            width: '100%',
+                            height: '100%',
+                            minHeight: '400px',
+                            overflow: 'hidden',
+                            background: '#04060d',
+                            borderRadius: '16px'
+                        }
+                    });
+
+                    // Create Canvas element
+                    const canvas = document.createElement('canvas');
+                    canvas.style.position = 'absolute';
+                    canvas.style.top = '0';
+                    canvas.style.left = '0';
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    canvas.style.zIndex = '0';
+                    canvas.style.pointerEvents = 'none';
+                    container.appendChild(canvas);
+
+                    // Mount child overlay elements
+                    if (config.overlay) {
+                        const overlayWrapper = papyr.div('.papyr-3d-overlay', {
+                            style: {
+                                position: 'relative',
+                                zIndex: '2',
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '24px',
+                                pointerEvents: 'auto'
+                            }
+                        }, config.overlay);
+                        container.appendChild(overlayWrapper);
+                    }
+
+                    // Append any additional children inside the container
+                    children.forEach(child => {
+                        if (child) {
+                            if (child instanceof Element) {
+                                child.style.position = 'relative';
+                                child.style.zIndex = '2';
+                            }
+                            container.appendChild(child);
+                        }
+                    });
+
+                    // Boot renderers after mount paint
+                    setTimeout(() => {
+                        const w = container.clientWidth || window.innerWidth;
+                        const h = container.clientHeight || window.innerHeight;
+                        canvas.width = w;
+                        canvas.height = h;
+
+                        if (window.THREE) {
+                            bootThreeJS(canvas, config);
+                        } else {
+                            bootFallbackCanvas(canvas, config);
+                        }
+                    }, 50);
+
+                    return container;
+                }
+            };
+
+            // Attach to namespace
+            window.papyr3d = papyr3d;
+            papyr['3d'] = papyr3d; // both references work cleanly
+        }
+    };
+
+    // Auto-register in global window environment for backwards compatibility
+    const targetPapyr = window.papyr || (typeof global !== 'undefined' && global.papyr);
+    if (targetPapyr) {
+        targetPapyr.use(immersivePlugin);
+    }
+
+    // Export the plugin object for ESM/CommonJS contexts
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = immersivePlugin;
+    } else if (typeof exports !== 'undefined') {
+        exports.default = immersivePlugin;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function() { return immersivePlugin; });
+    } else {
+        window.papyrImmersive = immersivePlugin;
+    }
 })(typeof window !== 'undefined' ? window : this);

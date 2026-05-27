@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papyr Task Manager - Creative Computing</title>
+    
+    <!-- Meta tags for premium SEO -->
+    <meta name="description" content="An advanced responsive Task Board with reactive category filters, priority tags, and Canvas2D progress rings built with Papyr.">
+    <meta name="keywords" content="papyr, todo, taskboard, charts, database, interactive, reactive, css">
+    
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="../papyr-complete.js"></script>
+    <script src="../papyr-plugins.js"></script>
+    <style>
+        :root {
+            --bg-color: #030712;
+            --surface-color: rgba(17, 24, 39, 0.6);
+            --border-color: rgba(255, 255, 255, 0.06);
+            --accent-primary: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.12);
+            --text-primary: #f9fafb;
+            --text-secondary: #9ca3af;
+            
+            --priority-high: #ef4444;
+            --priority-medium: #f97316;
+            --priority-low: #10b981;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at top left, rgba(99, 102, 241, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.08) 0%, transparent 40%);
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            padding: 40px 20px;
+            box-sizing: border-box;
+        }
+
+        /* Responsive Layout Grid */
+        .app-layout {
+            display: flex;
+            gap: 28px;
+            max-width: 900px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        /* Stats Panel */
+        .stats-panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            width: 260px;
+            padding: 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 20px 45px -15px rgba(0, 0, 0, 0.5);
+            max-height: 400px;
+        }
+
+        .stats-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            align-self: flex-start;
+        }
+
+        .chart-wrapper {
+            margin: 10px 0 20px 0;
+            min-height: 140px;
+        }
+
+        .stats-breakdown {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 30%;
+        }
+
+        .stat-val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-lbl {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Todo Board Panel */
+        .board-panel {
+            background: var(--surface-color);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            flex-grow: 1;
+            max-width: 580px;
+            padding: 28px;
+            box-sizing: border-box;
+            box-shadow: 
+                0 20px 45px -15px rgba(0, 0, 0, 0.5),
+                0 0 40px 0 var(--accent-glow);
+        }
+
+        .board-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 0;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        /* Input Form Bar */
+        .task-form {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .task-input {
+            flex-grow: 1;
+            min-width: 200px;
+            background: rgba(3, 7, 18, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: #ffffff;
+            padding: 12px 16px;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .task-input:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .glass-select {
+            background: rgba(3, 7, 18, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: #ffffff;
+            padding: 10px 14px;
+            outline: none;
+            font-family: inherit;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .add-task-btn {
+            background: linear-gradient(135deg, var(--accent-primary) 0%, #4f46e5 100%);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 12px 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .add-task-btn:hover {
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+            transform: translateY(-1px);
+        }
+        .add-task-btn:active {
+            transform: scale(0.96);
+        }
+
+        /* Filter Pills */
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .filter-pill {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 6px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-pill:hover {
+            background: rgba(255,255,255,0.08);
+            color: var(--text-primary);
+        }
+        .filter-pill.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: rgba(99, 102, 241, 0.3);
+            color: var(--text-primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.1);
+        }
+
+        /* Task Cards List */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .task-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .task-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .task-item-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-left: 4px solid var(--accent-primary);
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .task-item-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            transform: scale(1.01);
+        }
+
+        .task-item-card.completed {
+            opacity: 0.55;
+            border-left-color: var(--text-secondary);
+        }
+
+        .task-item-card.completed .task-label {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .task-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-grow: 1;
+        }
+
+        /* Priority Tag Indicators */
+        .task-item-card.high { border-left-color: var(--priority-high); }
+        .task-item-card.medium { border-left-color: var(--priority-medium); }
+        .task-item-card.low { border-left-color: var(--priority-low); }
+
+        .task-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 6px;
+            outline: none;
+            cursor: pointer;
+            position: relative;
+            background: rgba(3, 7, 18, 0.5);
+            transition: all 0.2s;
+        }
+
+        .task-checkbox:checked {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .task-checkbox:checked::after {
+            content: "✓";
+            color: #ffffff;
+            font-size: 0.8rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+        }
+
+        .task-info {
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+        }
+
+        .task-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 8px;
+            font-size: 0.72rem;
+            color: var(--text-secondary);
+            align-items: center;
+        }
+
+        .meta-priority {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .meta-priority.high { color: var(--priority-high); }
+        .meta-priority.medium { color: var(--priority-medium); }
+        .meta-priority.low { color: var(--priority-low); }
+
+        .delete-task {
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .delete-task:hover {
+            color: #ef4444;
+        }
+
+        .empty-tasks {
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 0.9rem;
+            padding: 30px 0;
+            text-align: center;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body>
+
+    <a href="index.html" class="back-link">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Portal
+    </a>
+
+    <div id="app"></div>
+
+    <script>
+        const tasks = papyr.state([]);
+        const activeFilter = papyr.state('all'); // 'all', 'active', 'completed'
+
+        // 1. Initialise Task DB
+        const db = papyr.db('papyr_tasks');
+
+        function loadTasks() {
+            const records = db.list();
+            if (records.length === 0) {
+                // Seed database
+                db.insert({ label: 'Complete Papyr.js modular architecture refactoring', category: 'Work', priority: 'high', completed: true });
+                db.insert({ label: 'Review the design DNA haptic micro-interactions', category: 'Design', priority: 'medium', completed: false });
+                db.insert({ label: 'Practice custom formulas in Science graphing plugin', category: 'Science', priority: 'low', completed: false });
+                tasks.value = db.list();
+            } else {
+                tasks.value = records;
+            }
+        }
+
+        // 2. Computed Filtering States
+        const filteredTasks = papyr.computed(() => {
+            const currentFilter = activeFilter.value;
+            if (currentFilter === 'active') {
+                return tasks.value.filter(t => !t.completed);
+            } else if (currentFilter === 'completed') {
+                return tasks.value.filter(t => t.completed);
+            }
+            return tasks.value;
+        });
+
+        // 3. Computed Statistics
+        const totalCount = papyr.computed(() => tasks.value.length);
+        const activeCount = papyr.computed(() => tasks.value.filter(t => !t.completed).length);
+        const completedCount = papyr.computed(() => tasks.value.filter(t => t.completed).length);
+        
+        const completionRate = papyr.computed(() => {
+            const total = totalCount.value;
+            const completed = completedCount.value;
+            return total > 0 ? Math.round((completed / total) * 100) : 0;
+        });
+
+        // Dynamic reactive progress micro-chart template
+        const progressChart = papyr.computed(() => {
+            const rate = completionRate.value;
+            // Calls canvas micro-chart plugin dynamically!
+            return papyr.chart('ring', 
+                { value: rate, label: 'Task Ratio' }, 
+                { width: 140, height: 140, color: '#10b981' }
+            );
+        });
+
+        // CRUD: Insert Task
+        function addNewTask() {
+            const input = document.getElementById('task-label-input');
+            const category = document.getElementById('task-cat-select').value;
+            const priority = document.getElementById('task-priority-select').value;
+
+            if (!input.value.trim()) {
+                papyr.toast('Task description is required', 'error');
+                return;
+            }
+
+            db.insert({
+                label: input.value.trim(),
+                category: category,
+                priority: priority,
+                completed: false
+            });
+
+            input.value = '';
+            tasks.value = db.list();
+            papyr.toast('Task created successfully', 'success');
+        }
+
+        // CRUD: Update completed toggle
+        function toggleTaskCompleted(noteId, currentStatus) {
+            db.update(noteId, { completed: !currentStatus });
+            tasks.value = db.list();
+        }
+
+        // CRUD: Delete Task
+        function deleteTask(noteId) {
+            db.delete(noteId);
+            tasks.value = db.list();
+            papyr.toast('Task removed', 'warning');
+        }
+
+        // Render individual task template card
+        function renderTaskCard(task) {
+            const isDone = task.completed;
+            return papyr.div(() => `.task-item-card.${task.priority}${isDone ? '.completed' : ''}`,
+                
+                papyr.div('.task-left',
+                    papyr.input('.task-checkbox', {
+                        type: 'checkbox',
+                        checked: isDone,
+                        onchange: () => toggleTaskCompleted(task.id, isDone)
+                    }),
+                    papyr.div('.task-info',
+                        papyr.div('.task-label', task.label),
+                        papyr.div('.task-meta',
+                            papyr.span('.tag-pill', task.category),
+                            papyr.span(() => `.meta-priority.${task.priority}`, task.priority)
+                        )
+                    )
+                ),
+
+                papyr.div('.delete-task', {
+                    onclick: () => deleteTask(task.id)
+                },
+                    papyr.html('<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>')
+                )
+            );
+        }
+
+        // Assembly page structure
+        const app = papyr.div('.app-layout',
+            
+            // Statistics Sidebar
+            papyr.div('.stats-panel',
+                papyr.h4('.stats-title', 'Overview Progress'),
+                
+                // Reactive progress canvas ring
+                papyr.div('.chart-wrapper', progressChart),
+
+                // Statistics counts
+                papyr.div('.stats-breakdown',
+                    papyr.div('.stat-item',
+                        papyr.span('.stat-val', () => totalCount.value),
+                        papyr.span('.stat-lbl', 'Total')
+                    ),
+                    papyr.div('.stat-item',
+                        papyr.span('.stat-val', () => activeCount.value),
+                        papyr.span('.stat-lbl', 'Active')
+                    ),
+                    papyr.div('.stat-item',
+                        papyr.span('.stat-val', () => completedCount.value),
+                        papyr.span('.stat-lbl', 'Done')
+                    )
+                )
+            ),
+
+            // Main Task board panel
+            papyr.div('.board-panel',
+                papyr.h3('.board-title', 'Task Board'),
+
+                // Task Inputs Form
+                papyr.div('.task-form',
+                    papyr.input('.task-input', {
+                        id: 'task-label-input',
+                        placeholder: 'Write a new task label...',
+                        onkeydown: (e) => { if (e.key === 'Enter') addNewTask(); }
+                    }),
+                    papyr.select('.glass-select', { id: 'task-cat-select' },
+                        papyr.option({ value: 'Work' }, 'Work'),
+                        papyr.option({ value: 'Personal' }, 'Personal'),
+                        papyr.option({ value: 'Design' }, 'Design'),
+                        papyr.option({ value: 'Science' }, 'Science')
+                    ),
+                    papyr.select('.glass-select', { id: 'task-priority-select' },
+                        papyr.option({ value: 'high' }, 'High'),
+                        papyr.option({ value: 'medium' }, 'Medium'),
+                        papyr.option({ value: 'low' }, 'Low')
+                    ),
+                    papyr.button('.add-task-btn:Add', { onclick: addNewTask })
+                ),
+
+                // Filter Pill triggers
+                papyr.div('.filter-bar',
+                    papyr.button(() => `.filter-pill${activeFilter.value === 'all' ? '.active' : ''}:All`, {
+                        onclick: () => activeFilter.value = 'all'
+                    }),
+                    papyr.button(() => `.filter-pill${activeFilter.value === 'active' ? '.active' : ''}:Active`, {
+                        onclick: () => activeFilter.value = 'active'
+                    }),
+                    papyr.button(() => `.filter-pill${activeFilter.value === 'completed' ? '.active' : ''}:Done`, {
+                        onclick: () => activeFilter.value = 'completed'
+                    })
+                ),
+
+                // Scrolling task listing
+                papyr.div('.task-list',
+                    papyr.if(() => filteredTasks.value.length === 0,
+                        () => papyr.div('.empty-tasks:No tasks found matching this criteria.'),
+                        () => papyr.fragment(
+                            papyr.for(filteredTasks, renderTaskCard)
+                        )
+                    )
+                )
+            )
+        );
+
+        // Mount and Initialize
+        loadTasks();
+        papyr.mount('#app', app);
+    </script>
+</body>
+</html>

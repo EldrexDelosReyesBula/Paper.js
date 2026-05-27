@@ -1,12 +1,11 @@
 /**
- * PAPER STATIC SITE LIBRARY - Core Bundle
+ * PAPER STATIC SITE LIBRARY - Core Bundle (ESM)
  * v3.0 - Agile Modular Architecture (Reactivity, Hash SPA Router, Math Logic, Persistent CRUD Store)
  * Released under MIT License.
  */
 
-(function(window) {
-    let activeEffect = null;
-    let isDebug = false;
+let activeEffect = null;
+let isDebug = false;
 
 // --- MODULE: core/papyr-core.js ---
 /**
@@ -3124,7 +3123,6 @@ if (typeof window !== 'undefined' && !window.papyr) {
 
 
 
-    // Export to global window context
-    window.papyr = createPapyr();
-
-})(typeof window !== 'undefined' ? window : this);
+const papyr = createPapyr();
+export { papyr, createPapyr };
+export default papyr;

@@ -7,7 +7,13 @@
 
 coreInitializers.push((papyr) => {
     const flatten = (arr) => arr.reduce((acc, val) => acc.concat(Array.isArray(val) ? flatten(val) : val), []);
-    const getVal = (x) => (x && typeof x.subscribe === 'function' ? x.value : Number(x || 0));
+    const getVal = (x) => {
+        let v = x && typeof x.subscribe === 'function' ? x.value : x;
+        if (Array.isArray(v)) {
+            return v.reduce((sum, item) => sum + Number(item || 0), 0);
+        }
+        return Number(v || 0);
+    };
 
     papyr.math = {
         /**
@@ -30,7 +36,13 @@ coreInitializers.push((papyr) => {
         mul: (...args) => papyr.computed(() => {
             let flat = flatten(args);
             if (flat.length === 0) return 0;
-            return flat.reduce((acc, cur) => acc * (cur && typeof cur.subscribe === 'function' ? cur.value : Number(cur || 1)), 1);
+            return flat.reduce((acc, cur) => {
+                let v = cur && typeof cur.subscribe === 'function' ? cur.value : cur;
+                if (Array.isArray(v)) {
+                    return acc * v.reduce((p, item) => p * Number(item === undefined || item === null ? 1 : item), 1);
+                }
+                return acc * (v === undefined || v === null ? 1 : Number(v));
+            }, 1);
         }),
 
         /**

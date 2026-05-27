@@ -4,13 +4,6 @@
  * v2.0 - Multibody Verlet collisions, elastic bounce solvers, mouse drag tracking, and Matter.js auto-upgraders.
  */
 (function(window) {
-    if (!window.papyr) {
-        console.warn("Papyr core not found. Load papyr.js before loading physics plugins.");
-        return;
-    }
-
-    const papyr = window.papyr;
-
     // Advanced Zero-Dependency 2D Verlet Integration Collision Solver
     class VerletWorld {
         constructor(canvas, options = {}) {
@@ -94,8 +87,8 @@
                 this.render();
             };
             
-            if (papyr.power && typeof papyr.power.throttle === 'function') {
-                this.stopThrottle = papyr.power.throttle(loop);
+            if (window.papyr && window.papyr.power && typeof window.papyr.power.throttle === 'function') {
+                this.stopThrottle = window.papyr.power.throttle(loop);
             } else {
                 const legacyLoop = () => {
                     if (!this.running) return;
@@ -234,102 +227,124 @@
         }
     }
 
-    papyr.physics = {
-        /**
-         * Creates a dynamic physics orchestration layer inside a canvas element.
-         * Auto-upgrades to Matter.js if loaded globally, otherwise boots our high-performance Verlet engine.
-         */
-        world(options = {}) {
-            const container = papyr.div('.papyr-physics-wrapper', {
-                style: {
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    minHeight: '350px',
-                    background: '#04060d',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.06)'
-                }
-            });
-
-            const canvas = document.createElement('canvas');
-            canvas.style.display = 'block';
-            canvas.style.width = '100%';
-            canvas.style.height = '100%';
-            container.appendChild(canvas);
-
-            // Setup sizes after painting
-            setTimeout(() => {
-                const w = container.clientWidth || 600;
-                const h = container.clientHeight || 350;
-                canvas.width = w;
-                canvas.height = h;
-
-                // Matter.js Integration
-                if (window.Matter) {
-                    try {
-                        const Engine = window.Matter.Engine;
-                        const Render = window.Matter.Render;
-                        const Runner = window.Matter.Runner;
-                        const Bodies = window.Matter.Bodies;
-                        const Composite = window.Matter.Composite;
-
-                        const engine = Engine.create({ gravity: { y: options.gravity || 1 } });
-                        const render = Render.create({
-                            canvas: canvas,
-                            engine: engine,
-                            options: {
-                                width: w,
-                                height: h,
-                                wireframes: false,
-                                background: '#04060d'
-                            }
-                        });
-
-                        Render.run(render);
-                        const runner = Runner.create();
-                        Runner.run(runner, engine);
-
-                        // Bound borders
-                        const ground = Bodies.rectangle(w/2, h + 30, w, 60, { isStatic: true });
-                        const leftWall = Bodies.rectangle(-30, h/2, 60, h, { isStatic: true });
-                        const rightWall = Bodies.rectangle(w + 30, h/2, 60, h, { isStatic: true });
-                        Composite.add(engine.world, [ground, leftWall, rightWall]);
-
-                        // Add some dynamic items
-                        for (let i = 0; i < 8; i++) {
-                            const radius = Math.random() * 20 + 15;
-                            const circle = Bodies.circle(Math.random() * w, 50, radius, {
-                                restitution: 0.8,
-                                render: { fillStyle: i % 2 === 0 ? '#6366f1' : '#14b8a6' }
-                            });
-                            Composite.add(engine.world, circle);
+    const physicsPlugin = {
+        name: 'papyr-physics',
+        version: '2.0.0',
+        install(papyr) {
+            papyr.physics = {
+                /**
+                 * Creates a dynamic physics orchestration layer inside a canvas element.
+                 * Auto-upgrades to Matter.js if loaded globally, otherwise boots our high-performance Verlet engine.
+                 */
+                world(options = {}) {
+                    const container = papyr.div('.papyr-physics-wrapper', {
+                        style: {
+                            position: 'relative',
+                            width: '100%',
+                            height: '100%',
+                            minHeight: '350px',
+                            background: '#04060d',
+                            borderRadius: '12px',
+                            overflow: 'hidden',
+                            border: '1px solid rgba(255,255,255,0.06)'
                         }
-                    } catch (e) {
-                        console.warn("Matter.js loading failed, falling back to Verlet engine.", e);
-                        bootVerlet(canvas, options);
+                    });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.style.display = 'block';
+                    canvas.style.width = '100%';
+                    canvas.style.height = '100%';
+                    container.appendChild(canvas);
+
+                    // Setup sizes after painting
+                    setTimeout(() => {
+                        const w = container.clientWidth || 600;
+                        const h = container.clientHeight || 350;
+                        canvas.width = w;
+                        canvas.height = h;
+
+                        // Matter.js Integration
+                        if (window.Matter) {
+                            try {
+                                const Engine = window.Matter.Engine;
+                                const Render = window.Matter.Render;
+                                const Runner = window.Matter.Runner;
+                                const Bodies = window.Matter.Bodies;
+                                const Composite = window.Matter.Composite;
+
+                                const engine = Engine.create({ gravity: { y: options.gravity || 1 } });
+                                const render = Render.create({
+                                    canvas: canvas,
+                                    engine: engine,
+                                    options: {
+                                        width: w,
+                                        height: h,
+                                        wireframes: false,
+                                        background: '#04060d'
+                                    }
+                                });
+
+                                Render.run(render);
+                                const runner = Runner.create();
+                                Runner.run(runner, engine);
+
+                                // Bound borders
+                                const ground = Bodies.rectangle(w/2, h + 30, w, 60, { isStatic: true });
+                                const leftWall = Bodies.rectangle(-30, h/2, 60, h, { isStatic: true });
+                                const rightWall = Bodies.rectangle(w + 30, h/2, 60, h, { isStatic: true });
+                                Composite.add(engine.world, [ground, leftWall, rightWall]);
+
+                                // Add some dynamic items
+                                for (let i = 0; i < 8; i++) {
+                                    const radius = Math.random() * 20 + 15;
+                                    const circle = Bodies.circle(Math.random() * w, 50, radius, {
+                                        restitution: 0.8,
+                                        render: { fillStyle: i % 2 === 0 ? '#6366f1' : '#14b8a6' }
+                                    });
+                                    Composite.add(engine.world, circle);
+                                }
+                            } catch (e) {
+                                console.warn("Matter.js loading failed, falling back to Verlet engine.", e);
+                                bootVerlet(canvas, options);
+                            }
+                        } else {
+                            bootVerlet(canvas, options);
+                        }
+                    }, 50);
+
+                    function bootVerlet(cv, opt) {
+                        const world = new VerletWorld(cv, opt);
+                        
+                        // Add initial bouncing rigid bodies
+                        world.addBody(100, 100, 24, { vx: 2, vy: 0, color: '#6366f1' });
+                        world.addBody(200, 80, 18, { vx: -3, vy: 0, color: '#14b8a6' });
+                        world.addBody(300, 150, 30, { vx: 1, vy: -2, color: '#ff007f' });
+                        world.addBody(400, 120, 20, { vx: 0, vy: 0, color: '#00f0ff' });
+
+                        world.start();
+                        container._verletWorld = world; // attach reference for developer inspections
                     }
-                } else {
-                    bootVerlet(canvas, options);
+
+                    return container;
                 }
-            }, 50);
-
-            function bootVerlet(cv, opt) {
-                const world = new VerletWorld(cv, opt);
-                
-                // Add initial bouncing rigid bodies
-                world.addBody(100, 100, 24, { vx: 2, vy: 0, color: '#6366f1' });
-                world.addBody(200, 80, 18, { vx: -3, vy: 0, color: '#14b8a6' });
-                world.addBody(300, 150, 30, { vx: 1, vy: -2, color: '#ff007f' });
-                world.addBody(400, 120, 20, { vx: 0, vy: 0, color: '#00f0ff' });
-
-                world.start();
-                container._verletWorld = world; // attach reference for developer inspections
-            }
-
-            return container;
+            };
         }
     };
 
+    // Auto-register in global window environment for backwards compatibility
+    const targetPapyr = window.papyr || (typeof global !== 'undefined' && global.papyr);
+    if (targetPapyr) {
+        targetPapyr.use(physicsPlugin);
+    }
+
+    // Export the plugin object for ESM/CommonJS contexts
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = physicsPlugin;
+    } else if (typeof exports !== 'undefined') {
+        exports.default = physicsPlugin;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function() { return physicsPlugin; });
+    } else {
+        window.papyrPhysics = physicsPlugin;
+    }
 })(typeof window !== 'undefined' ? window : this);

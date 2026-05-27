@@ -31,22 +31,29 @@ coreInitializers.push((papyr) => {
         init(config) {
             this._config = { ...this._config, ...config };
             
-            // Auto-login check for local token
+            // Auto-login check for local token with expiry
             if (this._config.provider === 'local') {
                 let token = papyr.storage.get("auth_token");
                 if (token) {
                     let sessions = papyr.storage.get("papyr_auth_sessions") || {};
-                    let username = sessions[token];
-                    if (username) {
-                        let users = papyr.storage.get("papyr_auth_users") || {};
-                        let userRecord = users[username];
-                        if (userRecord) {
-                            this.user.value = { id: userRecord.id, username: username, token };
+                    let sessionRecord = sessions[token];
+                    if (sessionRecord) {
+                        let username = typeof sessionRecord === 'object' ? sessionRecord.username : sessionRecord;
+                        let expiresAt = typeof sessionRecord === 'object' ? sessionRecord.expiresAt : null;
+                        
+                        if (expiresAt && Date.now() > expiresAt) {
+                            this.logout();
                         } else {
-                            papyr.storage.set("auth_token", null);
+                            let users = papyr.storage.get("papyr_auth_users") || {};
+                            let userRecord = users[username];
+                            if (userRecord) {
+                                this.user.value = { id: userRecord.id, username: username, token };
+                            } else {
+                                this.logout();
+                            }
                         }
                     } else {
-                        papyr.storage.set("auth_token", null);
+                        this.logout();
                     }
                 }
             }
@@ -57,6 +64,17 @@ coreInitializers.push((papyr) => {
                 if (!credentials.username || !credentials.password) {
                     return Promise.reject(new Error("Authentication failed: Username and password are required."));
                 }
+
+                // Brute-force account lockout checks
+                let lockouts = papyr.storage.get("papyr_auth_lockouts") || {};
+                let lockoutRecord = lockouts[credentials.username];
+                if (lockoutRecord) {
+                    if (lockoutRecord.failedCount >= 5 && Date.now() < lockoutRecord.lockedUntil) {
+                        const minsLeft = Math.ceil((lockoutRecord.lockedUntil - Date.now()) / (60 * 1000));
+                        return Promise.reject(new Error(`Account locked: Too many failed login attempts. Try again in ${minsLeft} minutes.`));
+                    }
+                }
+
                 let users = papyr.storage.get("papyr_auth_users") || {};
                 let userRecord = users[credentials.username];
                 if (!userRecord) {
@@ -65,12 +83,32 @@ coreInitializers.push((papyr) => {
                 
                 const hashedPassword = await this._hashPassword(credentials.password);
                 if (userRecord.passwordHash !== hashedPassword) {
-                    return Promise.reject(new Error("Authentication failed: Incorrect password."));
+                    let failedCount = (lockoutRecord ? lockoutRecord.failedCount : 0) + 1;
+                    let lockedUntil = null;
+                    if (failedCount >= 5) {
+                        lockedUntil = Date.now() + 15 * 60 * 1000; // 15-minute lock
+                    }
+                    lockouts[credentials.username] = { failedCount, lockedUntil };
+                    papyr.storage.set("papyr_auth_lockouts", lockouts);
+                    
+                    if (failedCount >= 5) {
+                        return Promise.reject(new Error("Account locked: Too many failed login attempts. Locked for 15 minutes."));
+                    }
+                    return Promise.reject(new Error(`Authentication failed: Incorrect password. ${5 - failedCount} attempts remaining.`));
                 }
                 
+                // Clear lockout on success
+                if (lockouts[credentials.username]) {
+                    delete lockouts[credentials.username];
+                    papyr.storage.set("papyr_auth_lockouts", lockouts);
+                }
+
                 const token = "local_session_" + Math.random().toString(36).substr(2, 9);
                 let sessions = papyr.storage.get("papyr_auth_sessions") || {};
-                sessions[token] = credentials.username;
+                sessions[token] = {
+                    username: credentials.username,
+                    expiresAt: Date.now() + 2 * 60 * 60 * 1000 // 2-hour session expiry
+                };
                 papyr.storage.set("papyr_auth_sessions", sessions);
                 
                 papyr.storage.set("auth_token", token);
@@ -96,6 +134,9 @@ coreInitializers.push((papyr) => {
                 if (!credentials.username || !credentials.password) {
                     return Promise.reject(new Error("Registration failed: Username and password are required."));
                 }
+                if (credentials.password.length < 8) {
+                    return Promise.reject(new Error("Registration failed: Password must be at least 8 characters long."));
+                }
                 let users = papyr.storage.get("papyr_auth_users") || {};
                 if (users[credentials.username]) {
                     return Promise.reject(new Error("Registration failed: Username already exists."));
@@ -111,7 +152,10 @@ coreInitializers.push((papyr) => {
                 
                 const token = "local_session_" + Math.random().toString(36).substr(2, 9);
                 let sessions = papyr.storage.get("papyr_auth_sessions") || {};
-                sessions[token] = credentials.username;
+                sessions[token] = {
+                    username: credentials.username,
+                    expiresAt: Date.now() + 2 * 60 * 60 * 1000 // 2-hour session expiry
+                };
                 papyr.storage.set("papyr_auth_sessions", sessions);
                 
                 papyr.storage.set("auth_token", token);

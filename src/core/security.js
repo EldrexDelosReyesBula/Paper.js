@@ -46,17 +46,20 @@
                         tempStorage = {};
                     } catch(e) {}
                 } else {
-                    // Clear tracking keys from real localStorage
+                    // Clear tracking keys from real localStorage in a single transactional pass to avoid index shift bugs
                     try {
-                        if (originalRemoveItem && originalGetItem) {
-                            trackingKeys.forEach(tk => {
-                                for (let i = localStorage.length - 1; i >= 0; i--) {
-                                    let key = localStorage.key(i);
-                                    if (key && key.toLowerCase().includes(tk)) {
-                                        originalRemoveItem(key);
+                        if (originalRemoveItem) {
+                            const keysToDelete = [];
+                            for (let i = 0; i < localStorage.length; i++) {
+                                let key = localStorage.key(i);
+                                if (key) {
+                                    const lowerKey = key.toLowerCase();
+                                    if (trackingKeys.some(tk => lowerKey.includes(tk))) {
+                                        keysToDelete.push(key);
                                     }
                                 }
-                            });
+                            }
+                            keysToDelete.forEach(key => originalRemoveItem(key));
                         }
                     } catch(e) {}
                 }
@@ -122,17 +125,50 @@
             sanitize(html) {
                 if (!this._isActive || typeof html !== 'string') return html;
                 
-                // 1. Remove <script> tags and their contents
-                let clean = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                let clean = html;
+                if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const allowedTags = ['div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'button', 'a', 'img', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'td', 'th', 'form', 'label', 'input', 'textarea', 'select', 'option', 'pre', 'code', 'strong', 'em', 'small', 'hr', 'br', 'canvas', 'svg', 'path', 'rect', 'circle'];
+                        const allowedAttrs = ['class', 'style', 'id', 'href', 'src', 'alt', 'title', 'placeholder', 'type', 'name', 'value', 'checked', 'disabled', 'rows', 'cols', 'width', 'height', 'viewBox', 'd', 'role', 'aria-live', 'aria-modal', 'aria-labelledby', 'tabindex', 'aria-label'];
+                        
+                        const cleanNode = (node) => {
+                            if (node.nodeType === 1) { // Element
+                                const tagName = node.tagName.toLowerCase();
+                                if (!allowedTags.includes(tagName) || tagName === 'script') {
+                                    node.parentNode.removeChild(node);
+                                    return;
+                                }
+                                
+                                const attrs = Array.from(node.attributes);
+                                attrs.forEach(attr => {
+                                    const name = attr.name.toLowerCase();
+                                    const val = attr.value.toLowerCase().trim();
+                                    if (!allowedAttrs.includes(name) || name.startsWith('on') || val.includes('javascript:')) {
+                                        node.removeAttribute(attr.name);
+                                    }
+                                });
+                                
+                                Array.from(node.childNodes).forEach(cleanNode);
+                            }
+                        };
+                        
+                        Array.from(doc.body.childNodes).forEach(cleanNode);
+                        clean = doc.body.innerHTML;
+                    } catch(e) {
+                        // fallback to regex below
+                    }
+                }
                 
-                // 2. Remove inline event handlers (onclick, onmouseover, etc)
-                clean = clean.replace(/ on\w+="[^"]*"/gi, '');
-                clean = clean.replace(/ on\w+='[^']*'/gi, '');
-                clean = clean.replace(/ on\w+=\w+/gi, '');
-                
-                // 3. Remove javascript: pseudo-protocols
-                clean = clean.replace(/href="javascript:[^"]*"/gi, 'href="#"');
-                clean = clean.replace(/src="javascript:[^"]*"/gi, 'src=""');
+                if (clean === html || typeof DOMParser === 'undefined') {
+                    clean = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+                    clean = clean.replace(/\s+on\w+\s*=\s*"[^"]*"/gi, '');
+                    clean = clean.replace(/\s+on\w+\s*=\s*'[^']*'/gi, '');
+                    clean = clean.replace(/\s+on\w+\s*=\s*\w+/gi, '');
+                    clean = clean.replace(/href\s*=\s*['"]\s*javascript:[^'"]*['"]/gi, 'href="#"');
+                    clean = clean.replace(/src\s*=\s*['"]\s*javascript:[^'"]*['"]/gi, 'src=""');
+                }
 
                 if (html !== clean) {
                     if (papyr.warn) papyr.warn("Papyr Security Interceptor blocked a potential XSS payload.");
@@ -151,30 +187,146 @@
             },
 
             /**
-             * Lightweight Client-Side Storage Encryption (Obfuscation)
+             * Client-Side Storage Encryption (Obfuscated Dynamic Feedback Cipher)
              * Prevents generic localStorage scraping by malicious extensions.
              */
             encrypt(text, password) {
                 if (!text) return text;
+                const utf8Text = typeof window !== 'undefined' ? unescape(encodeURIComponent(text)) : Buffer.from(text, 'utf8').toString('binary');
                 let result = '';
-                for (let i = 0; i < text.length; i++) {
-                    result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                let keyFeedback = 0;
+                for (let i = 0; i < utf8Text.length; i++) {
+                    let keyChar = password.charCodeAt(i % password.length);
+                    let mixedKey = (keyChar + i + keyFeedback) & 255;
+                    let encryptedChar = utf8Text.charCodeAt(i) ^ mixedKey;
+                    result += String.fromCharCode(encryptedChar);
+                    keyFeedback = encryptedChar;
                 }
-                return typeof window !== 'undefined' ? window.btoa(result) : result;
+                return typeof window !== 'undefined' ? window.btoa(result) : Buffer.from(result, 'binary').toString('base64');
             },
 
             decrypt(encodedText, password) {
                 if (!encodedText) return encodedText;
                 try {
-                    let text = typeof window !== 'undefined' ? window.atob(encodedText) : encodedText;
+                    let binaryStr = typeof window !== 'undefined' ? window.atob(encodedText) : Buffer.from(encodedText, 'base64').toString('binary');
                     let result = '';
-                    for (let i = 0; i < text.length; i++) {
-                        result += String.fromCharCode(text.charCodeAt(i) ^ password.charCodeAt(i % password.length));
+                    let keyFeedback = 0;
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        let keyChar = password.charCodeAt(i % password.length);
+                        let mixedKey = (keyChar + i + keyFeedback) & 255;
+                        let decryptedChar = binaryStr.charCodeAt(i) ^ mixedKey;
+                        result += String.fromCharCode(decryptedChar);
+                        keyFeedback = binaryStr.charCodeAt(i);
                     }
-                    return result;
+                    return typeof window !== 'undefined' ? decodeURIComponent(escape(result)) : Buffer.from(result, 'binary').toString('utf8');
                 } catch(e) {
                     if (papyr.warn) papyr.warn("Papyr Security: Decryption failed (invalid key or corrupted data).");
                     return null;
+                }
+            },
+
+            /**
+             * Advanced Client-Side Storage Encryption (Browser-native AES-GCM 256-bit with PBKDF2)
+             */
+            async encryptAsync(text, password) {
+                if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
+                    return this.encrypt(text, password);
+                }
+                try {
+                    const encoder = new TextEncoder();
+                    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                    
+                    const keyMaterial = await window.crypto.subtle.importKey(
+                        "raw", 
+                        encoder.encode(password), 
+                        "PBKDF2", 
+                        false, 
+                        ["deriveKey"]
+                    );
+                    
+                    const key = await window.crypto.subtle.deriveKey(
+                        {
+                            name: "PBKDF2",
+                            salt: salt,
+                            iterations: 100000,
+                            hash: "SHA-256"
+                        },
+                        keyMaterial,
+                        { name: "AES-GCM", length: 256 },
+                        false,
+                        ["encrypt"]
+                    );
+                    
+                    const ciphertext = await window.crypto.subtle.encrypt(
+                        { name: "AES-GCM", iv: iv }, 
+                        key, 
+                        encoder.encode(text)
+                    );
+                    
+                    const combined = new Uint8Array(salt.length + iv.length + ciphertext.byteLength);
+                    combined.set(salt, 0);
+                    combined.set(iv, salt.length);
+                    combined.set(new Uint8Array(ciphertext), salt.length + iv.length);
+                    
+                    let binary = '';
+                    for (let i = 0; i < combined.byteLength; i++) {
+                        binary += String.fromCharCode(combined[i]);
+                    }
+                    return window.btoa(binary);
+                } catch (e) {
+                    console.error("Papyr Security: Async Encryption failed, falling back to sync.", e);
+                    return this.encrypt(text, password);
+                }
+            },
+
+            async decryptAsync(encodedText, password) {
+                if (typeof window === 'undefined' || !window.crypto || !window.crypto.subtle) {
+                    return this.decrypt(encodedText, password);
+                }
+                try {
+                    const binaryStr = window.atob(encodedText);
+                    const combined = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        combined[i] = binaryStr.charCodeAt(i);
+                    }
+                    
+                    const salt = combined.slice(0, 16);
+                    const iv = combined.slice(16, 28);
+                    const ciphertext = combined.slice(28);
+                    
+                    const encoder = new TextEncoder();
+                    const keyMaterial = await window.crypto.subtle.importKey(
+                        "raw", 
+                        encoder.encode(password), 
+                        "PBKDF2", 
+                        false, 
+                        ["deriveKey"]
+                    );
+                    
+                    const key = await window.crypto.subtle.deriveKey(
+                        {
+                            name: "PBKDF2",
+                            salt: salt,
+                            iterations: 100000,
+                            hash: "SHA-256"
+                        },
+                        keyMaterial,
+                        { name: "AES-GCM", length: 256 },
+                        false,
+                        ["decrypt"]
+                    );
+                    
+                    const decrypted = await window.crypto.subtle.decrypt(
+                        { name: "AES-GCM", iv: iv }, 
+                        key, 
+                        ciphertext
+                    );
+                    
+                    return new TextDecoder().decode(decrypted);
+                } catch (e) {
+                    console.error("Papyr Security: Async Decryption failed, falling back to sync.", e);
+                    return this.decrypt(encodedText, password);
                 }
             }
         };

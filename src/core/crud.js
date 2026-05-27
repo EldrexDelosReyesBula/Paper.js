@@ -23,11 +23,37 @@ papyr.crud = (name, initialData = []) => {
         }
     };
 
-    return {
-        /**
-         * Reactive state containing all database records.
-         */
         items,
+
+        list() {
+            return items.value;
+        },
+
+        query(options = {}) {
+            let result = [...items.value];
+            if (typeof options.filter === 'function') {
+                result = result.filter(options.filter);
+            } else if (options.filter && typeof options.filter === 'object') {
+                result = result.filter(item => 
+                    Object.entries(options.filter).every(([k, v]) => item[k] === v)
+                );
+            }
+            if (options.sort) {
+                const { field, direction = 'asc' } = options.sort;
+                result.sort((a, b) => {
+                    let valA = a[field];
+                    let valB = b[field];
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+                    if (valA < valB) return direction === 'asc' ? -1 : 1;
+                    if (valA > valB) return direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            const offset = options.offset || 0;
+            const limit = options.limit !== undefined ? options.limit : result.length;
+            return result.slice(offset, offset + limit);
+        },
 
         /**
          * Appends a new item to the store and generates a unique Base36 string ID.

@@ -229,56 +229,183 @@
     /**
      * Glassmorphism Content Card.
      */
-    papyr.card = (title, content, footer = null) => {
-        let headerEl = typeof title === 'string' ? papyr.h3(title, '.card-title') : title;
-        let contentEl = typeof content === 'string' ? papyr.div(content, '.card-content') : content;
-        
-        let children = [headerEl, contentEl];
-        if (footer) {
-            let footerEl = typeof footer === 'string' ? papyr.div(footer, '.card-footer') : footer;
-            children.push(footerEl);
+    papyr.card = (...args) => {
+        if (args.length > 0 && typeof args[0] === 'object' && !(args[0] instanceof Element) && !(args[0] instanceof DocumentFragment) && !Array.isArray(args[0]) && typeof args[0].subscribe !== 'function') {
+            let [options, ...children] = args;
+            options = { ...options };
+            let isInteractive = options.interactive;
+            delete options.interactive;
+            
+            if (isInteractive) {
+                options.interactive = 'true';
+            }
+            return papyr('div', '.papyr-card', options, ...children);
+        } else {
+            let [title, content, footer] = args;
+            let headerEl = title ? (typeof title === 'string' ? papyr.h3(title, '.card-title') : title) : null;
+            let contentEl = content ? (typeof content === 'string' ? papyr.div(content, '.card-content') : content) : null;
+            
+            let children = [];
+            if (headerEl) children.push(headerEl);
+            if (contentEl) children.push(contentEl);
+            if (footer) {
+                let footerEl = typeof footer === 'string' ? papyr.div(footer, '.card-footer') : footer;
+                children.push(footerEl);
+            }
+            
+            return papyr.div('.papyr-card', ...children);
         }
-        
-        return papyr.div('.card', ...children);
+    };
+
+    papyr.title = (...args) => {
+        return papyr('h1', '.papyr-title', ...args);
+    };
+
+    papyr.muted = (...args) => {
+        return papyr('p', '.papyr-muted', ...args);
     };
 
     /**
      * Dialog modal frames with .show() and .hide() routines.
+     * Accessible, dual-compatible signature, with Escape dismissal and focus trapping.
      */
-    papyr.modal = (content, title = "Modal") => {
-        let modal = papyr.div('.modal', {style: {display: 'none'}},
-            papyr.div('.modal-content',
-                papyr.div('.modal-header',
-                    papyr.h3(title),
-                    papyr.button('×', {
-                        class: 'close-btn',
-                        on: {click: () => modal.hide()}
-                    })
-                ),
-                papyr.div(content, '.modal-body')
-            )
-        );
+    papyr.modal = (contentOrOptions, titleOrLegacy = "Modal") => {
+        let options = {};
+        let isLegacy = false;
         
-        modal.show = () => {
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('modal-show'), 10);
-        };
-        modal.hide = () => {
-            modal.classList.remove('modal-show');
-            setTimeout(() => modal.style.display = 'none', 300);
-        };
-        
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.hide();
+        if (contentOrOptions !== null && typeof contentOrOptions === 'object' && !(contentOrOptions instanceof Element) && !(contentOrOptions instanceof DocumentFragment)) {
+            options = { ...contentOrOptions };
+        } else {
+            options = {
+                content: contentOrOptions,
+                title: typeof titleOrLegacy === 'string' ? titleOrLegacy : "Modal"
+            };
+            isLegacy = true;
+        }
+
+        const title = options.title || 'Modal';
+        const content = options.content || '';
+        const animation = options.animation || 'glass-pop';
+        const onClose = options.onClose;
+
+        let overlay = papyr.div({
+            style: {
+                position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+                background: 'rgba(2, 6, 23, 0.65)', backdropFilter: 'blur(12px)',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                zIndex: 9998, opacity: 0, transition: 'opacity 0.3s ease'
+            },
+            on: {
+                click: (e) => { if (e.target === overlay) close(); }
+            }
         });
-        
-        return modal;
+
+        const modalId = 'papyr-modal-' + Math.random().toString(36).substring(2, 9);
+
+        let modalBox = papyr.div('.papyr-card.papyr-modal-box', {
+            id: modalId,
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-labelledby': modalId + '-title',
+            tabIndex: -1,
+            style: {
+                padding: '24px', width: '90%', maxWidth: '450px',
+                background: 'rgba(15, 23, 42, 0.65)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '24px',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                transform: animation === 'glass-pop' ? 'scale(0.9) translateY(10px)' : 'translateY(50px)',
+                transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+            }
+        }, 
+            papyr.flex.between(
+                papyr.h3(title, { id: modalId + '-title', style: { margin: 0, color: '#fff', fontSize: '1.25rem', fontWeight: '600' } }),
+                papyr.button("×", { 
+                    class: 'close-btn',
+                    ariaLabel: 'Close Dialog',
+                    on: { click: () => close() },
+                    style: { background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '24px', cursor: 'pointer', padding: '0 4px', lineLight: 1 }
+                })
+            ),
+            papyr.div({ style: { marginTop: '16px', color: '#cbd5e1', fontSize: '0.95rem', lineHeight: '1.5' } }, content)
+        );
+
+        overlay.appendChild(modalBox);
+
+        const previousActiveElement = typeof document !== 'undefined' ? document.activeElement : null;
+
+        const trapFocus = (e) => {
+            if (e.key === 'Tab') {
+                const focusables = modalBox.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (focusables.length === 0) return;
+                const first = focusables[0];
+                const last = focusables[focusables.length - 1];
+                if (e.shiftKey) {
+                    if (document.activeElement === first) {
+                        last.focus();
+                        e.preventDefault();
+                    }
+                } else {
+                    if (document.activeElement === last) {
+                        first.focus();
+                        e.preventDefault();
+                    }
+                }
+            }
+        };
+
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                close();
+            }
+        };
+
+        const show = () => {
+            if (typeof document === 'undefined') return;
+            document.body.appendChild(overlay);
+            overlay.offsetHeight;
+            overlay.style.opacity = '1';
+            modalBox.style.transform = animation === 'glass-pop' ? 'scale(1) translateY(0)' : 'translateY(0)';
+            
+            setTimeout(() => {
+                const firstFocusable = modalBox.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (firstFocusable) firstFocusable.focus();
+                else modalBox.focus();
+            }, 100);
+
+            document.addEventListener('keydown', handleEscape);
+            modalBox.addEventListener('keydown', trapFocus);
+        };
+
+        const close = () => {
+            overlay.style.opacity = '0';
+            modalBox.style.transform = animation === 'glass-pop' ? 'scale(0.9) translateY(10px)' : 'translateY(50px)';
+            
+            document.removeEventListener('keydown', handleEscape);
+            modalBox.removeEventListener('keydown', trapFocus);
+            
+            setTimeout(() => {
+                overlay.remove();
+                if (previousActiveElement && typeof previousActiveElement.focus === 'function') {
+                    previousActiveElement.focus();
+                }
+                if (onClose) onClose();
+            }, 300);
+        };
+
+        if (isLegacy) {
+            overlay.show = show;
+            overlay.hide = close;
+            return overlay;
+        } else {
+            show();
+            return { close };
+        }
     };
 
     // Static native fallbacks for browser/OS alert & confirm
     papyr.modal.alert = (message, title = "Alert") => {
         if (typeof window !== 'undefined') {
-            // Check if HTML5 Dialog is preferred, otherwise use window.alert
             if (window.alert) {
                 window.alert(`${title}\n\n${message}`);
             }
@@ -298,8 +425,13 @@
     /**
      * Micro-toast notification alerts. Supports OS native push notifications fallback.
      */
+    let toastContainer = null;
     papyr.toast = (message, type = 'info', duration = 3000, useNative = false) => {
-        if (useNative && typeof window !== 'undefined' && 'Notification' in window) {
+        if (typeof window === 'undefined') return;
+
+        if (type === 'default') type = 'info';
+
+        if (useNative && 'Notification' in window) {
             const fireNative = () => {
                 try {
                     new Notification('Papyr Notification', {
@@ -329,16 +461,70 @@
         showCustomToast();
         
         function showCustomToast() {
-            let toast = papyr.div(message, `.toast.toast-${type}`);
-            document.body.appendChild(toast);
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.className = 'papyr-toast-container';
+                toastContainer.style.cssText = `
+                    position: fixed;
+                    bottom: 24px;
+                    right: 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    z-index: 9999;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(toastContainer);
+            }
             
-            toast.offsetHeight; // trigger reflow
-            toast.classList.add('toast-show');
+            let bg = type === 'error' ? 'rgba(239, 68, 68, 0.9)' : 
+                     type === 'success' ? 'rgba(16, 185, 129, 0.9)' : 
+                     type === 'warning' ? 'rgba(245, 158, 11, 0.9)' : 
+                     'rgba(59, 130, 246, 0.9)';
+            
+            let iconSvg = type === 'error' ? '✕ ' : 
+                          type === 'success' ? '✓ ' : 
+                          type === 'warning' ? '⚠ ' : 
+                          'ℹ ';
+
+            let toast = document.createElement('div');
+            toast.className = `papyr-toast papyr-toast-${type}`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.style.cssText = `
+                background: ${bg};
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255,255,255,0.1);
+                color: #ffffff;
+                padding: 12px 24px;
+                border-radius: 16px;
+                box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+                font-family: inherit;
+                font-size: 0.9rem;
+                font-weight: 500;
+                pointer-events: auto;
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+                transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+            `;
+            
+            toast.innerHTML = `<span style="font-weight: bold; margin-right: 6px;">${iconSvg}</span>${message}`;
+            toastContainer.appendChild(toast);
+            
+            toast.offsetHeight;
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0) scale(1)';
             
             setTimeout(() => {
-                toast.classList.remove('toast-show');
-                toast.classList.add('toast-hide');
-                setTimeout(() => toast.remove(), 400);
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-10px) scale(0.95)';
+                setTimeout(() => {
+                    toast.remove();
+                    if (toastContainer && toastContainer.children.length === 0) {
+                        toastContainer.remove();
+                        toastContainer = null;
+                    }
+                }, 350);
             }, duration);
         }
     };

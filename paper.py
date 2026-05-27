@@ -78,7 +78,7 @@ def scaffold_init(app_name):
     <title>My Paper App</title>
     <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
     <!-- Paper Complete CDN link - Zero download dependencies -->
-    <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
+    <script src="https://papyrus-js.vercel.app/paper-complete.js"></script>
     <style>
         :root {
             --bg: #070913;
@@ -215,7 +215,7 @@ def scaffold_init(app_name):
     <title>My Paper App</title>
     <link rel="icon" type="image/png" href="https://eldrex.landecs.org/logo/eldrex-paper-js.png">
     <!-- Paper Complete CDN link - Zero download dependencies -->
-    <script src="https://eldrex-paper-js.vercel.app/paper-complete.js"></script>
+    <script src="https://papyrus-js.vercel.app/paper-complete.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
